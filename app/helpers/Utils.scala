@@ -1,0 +1,155 @@
+package helpers
+
+import java.io.{PrintWriter, StringWriter}
+import javax.inject.{Inject, Singleton}
+import io.circe.{Json => ciJson}
+import java.util.Calendar
+import io.kinoplan.emailaddress.EmailAddress
+import play.api.Logger
+import play.api.libs.json._
+import scala.collection.JavaConverters._
+import scala.collection.mutable.Seq
+import scala.util.Try
+
+import network.{Client, Explorer}
+import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoClientException, ErgoType, ErgoValue, InputBox, JavaHelpers, SignedTransaction}
+import special.collection.Coll
+import org.ergoplatform.ErgoAddress
+import sigmastate.serialization.ErgoTreeSerializer
+import network.Request
+import play.api.Logger
+import play.api.libs.json._
+
+
+final case class failedTxException(private val message: String = "Tx sending failed") extends Throwable(message)
+final case class requestException(private val message: String = "Explorer error") extends Throwable(message)
+final case class connectionException(private val message: String = "Network Error") extends Throwable(message)
+final case class parseException(private val message: String = "Parsing failed") extends Throwable(message)
+final case class skipException(private val message: String = "skip") extends Throwable(message)
+final case class proveException(private val message: String = "Tx proving failed") extends Throwable(message)
+final case class internalException(private val message: String = "something went wrong") extends Throwable(message)
+
+
+@Singleton
+class Utils @Inject()(client: Client, explorer: Explorer) {
+  private val logger: Logger = Logger(this.getClass)
+
+  def getStackTraceStr(e: Throwable): String = {
+    val sw = new StringWriter
+    val pw = new PrintWriter(sw)
+    e.printStackTrace(pw)
+    sw.toString
+  }
+
+
+  def getAddress(addressBytes: Array[Byte]): ErgoAddress = {
+    val ergoTree = ErgoTreeSerializer.DefaultSerializer.deserializeErgoTree(addressBytes)
+    Configs.addressEncoder.fromProposition(ergoTree).get
+  }
+
+  def longListToErgoValue(elements: Array[Long]): ErgoValue[Coll[Long]] = {
+    val longColl = JavaHelpers.SigmaDsl.Colls.fromArray(elements)
+    ErgoValue.of(longColl, ErgoType.longType())
+  }
+
+  def JsonToTransaction(txJson: JsValue, ctx: BlockchainContext): SignedTransaction ={
+    val inputs = (txJson \ "inputs").as[JsValue].toString().replaceAll("id", "boxId")
+    val outputs = (txJson \ "outputs").as[JsValue].toString().replaceAll("id", "boxId").replaceAll("txId", "transactionId")
+    val dataInputs = (txJson\ "dataInputs").as[JsValue].toString()
+    val id = (txJson \ "id").as[String]
+    val newJson = s"""{
+          "id" : "${id}",
+          "inputs" : ${inputs},
+          "dataInputs" : ${dataInputs},
+          "outputs" : ${outputs}
+          }"""
+    ctx.signedTxFromJson(newJson.replaceAll("null", "\"\""))
+  }
+
+  /**
+   * creates a box for the specified address and amount
+   * @return input box List, is covered, covered amount
+   */
+  def getCoveringBoxesWithMempool(paymentAddress: String, amount: Long): (List[InputBox], Boolean, Long) = try{
+    val cover = client.getCoveringBoxesFor(Address.create(paymentAddress), amount)
+    if(cover.isCovered) (cover.getBoxes.asScala.toList, true, cover.getCoveredAmount)
+    else {
+      var boxes: List[InputBox] = cover.getBoxes.asScala.toList
+      val mempool = Json.parse(explorer.getUnconfirmedTxByAddress(paymentAddress).toString())
+      val txs = (mempool \ "items").as[List[JsValue]]
+      var totalValue: Long = cover.getCoveredAmount
+      txs.foreach(txJson => {
+        client.getClient.execute(ctx => {
+          val tx = JsonToTransaction(txJson, ctx)
+          val selectedBoxes: List[InputBox] = tx.getOutputsToSpend.asScala.toList
+            .filter(box => Configs.addressEncoder.fromProposition(box.getErgoTree).get == Address.create(paymentAddress).getErgoAddress)
+          if(totalValue < amount) {
+            boxes = boxes ++ selectedBoxes
+            totalValue = totalValue + selectedBoxes.map(_.getValue).reduce((x,y)=> x + y)
+          }
+        })
+      })
+      (boxes, totalValue >= amount, totalValue)
+    }
+  } catch{
+    case e: connectionException => throw e
+    case e: JsResultException =>
+      logger.error(e.getMessage)
+      throw internalException()
+    case e: Throwable =>
+      logger.error(getStackTraceStr(e))
+      throw internalException()
+  }
+
+  def checkTransaction(txId: String): Int = {
+    try {
+      if (txId != "") {
+        val unconfirmedTx = explorer.getUnconfirmedTx(txId)
+        if (unconfirmedTx == ciJson.Null) {
+          val confirmedTx = explorer.getConfirmedTx(txId)
+          if (confirmedTx == ciJson.Null) {
+            0 // resend transaction
+          } else {
+            1 // transaction mined
+          }
+        } else {
+          2 // transaction already in mempool
+        }
+      } else {
+        0
+      }
+    } catch {
+      case e: connectionException => throw e
+      case e: Throwable =>
+        logger.error(getStackTraceStr(e))
+        throw internalException()
+    }
+  }
+
+  def isBoxInMemPool(box: InputBox) : Boolean = {
+    try {
+      val address = getAddress(box.getErgoTree.bytes)
+      val transactions = Json.parse(explorer.getTxsInMempoolByAddress(address.toString).toString())
+      if (transactions != null) {
+        (transactions \ "items").as[List[JsValue]].exists(tx =>{
+          if((tx \ "inputs").as[JsValue].toString().contains(box.getId.toString)) true
+          else false
+        })
+      } else {
+        false
+      }
+    } catch {
+      case e: connectionException => throw e
+      case e: JsResultException =>
+        logger.error(e.getMessage)
+        throw internalException()
+      case e: Throwable =>
+        logger.error(getStackTraceStr(e))
+        throw internalException()
+    }
+  }
+
+  def currentTime: Long = Calendar.getInstance().getTimeInMillis / 1000
+
+  def getTransactionFrontLink(txId: String): String = Configs.explorerFront + "/en/transactions/" + txId
+}
