@@ -15,6 +15,11 @@ object Configs extends ConfigHelper {
   lazy val minBoxErg: Long = readKey("minBoxErg").toLong
   lazy val infBoxVal: Long = readKey("infBoxVal").toLong
 
+  object incomeMerge{
+    lazy val min: Long = readKey("incomeMerge.min").toLong
+    lazy val max: Long = readKey("incomeMerge.max").toLong
+  }
+
   object token{
     lazy val locking: String = readKey("token.locking")
     lazy val staking: String = readKey("token.staking")

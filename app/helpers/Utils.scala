@@ -5,21 +5,15 @@ import javax.inject.{Inject, Singleton}
 import io.circe.{Json => ciJson}
 
 import java.util.Calendar
-import io.kinoplan.emailaddress.EmailAddress
 import play.api.Logger
 import play.api.libs.json._
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.Seq
-import scala.util.Try
 import network.{Client, Explorer}
 import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoClientException, ErgoContract, ErgoType, ErgoValue, InputBox, JavaHelpers, SignedTransaction}
 import special.collection.Coll
 import org.ergoplatform.ErgoAddress
 import sigmastate.serialization.ErgoTreeSerializer
-import network.Request
-import play.api.Logger
-import play.api.libs.json._
 import scorex.crypto.hash.Digest32
 
 
@@ -43,10 +37,13 @@ class Utils @Inject()(client: Client, explorer: Explorer) {
     sw.toString
   }
 
-
   def getAddress(addressBytes: Array[Byte]): ErgoAddress = {
     val ergoTree = ErgoTreeSerializer.DefaultSerializer.deserializeErgoTree(addressBytes)
     Configs.addressEncoder.fromProposition(ergoTree).get
+  }
+
+  def generateAddress(contract: ErgoContract): Address ={
+    Address.create(Configs.addressEncoder.fromProposition(contract.getErgoTree).get.toString)
   }
 
   def longListToErgoValue(elements: Array[Long]): ErgoValue[Coll[Long]] = {

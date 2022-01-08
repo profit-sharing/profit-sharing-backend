@@ -1,6 +1,7 @@
 package ProfitSharing
 
-import org.ergoplatform.appkit.{BlockchainContext, ConstantsBuilder, ErgoContract, ErgoId}
+import fastparse.utils.Utils
+import org.ergoplatform.appkit.{Address, BlockchainContext, ConstantsBuilder, ErgoContract, ErgoId}
 import helpers.{Configs, Utils}
 import network.Client
 
@@ -12,6 +13,8 @@ class Contracts @Inject()(client: Client, utils: Utils){
   lazy val distribution: ErgoContract = generateDistributionContract()
   lazy val ticket: ErgoContract = generateTicketContract()
   lazy val config: ErgoContract = generateConfigContract()
+  lazy val incomeAddress: Address = utils.generateAddress(income)
+
 
   private def generateIncomeContract(): ErgoContract ={
     client.getClient.execute(ctx => {

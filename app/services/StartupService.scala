@@ -1,5 +1,6 @@
 package services
 
+import ProfitSharing.Procedures
 import akka.actor.{ActorRef, ActorSystem, Props}
 import network.Client
 import play.api.Logger
@@ -9,7 +10,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 @Singleton
-class StartupService @Inject()(node: Client, system: ActorSystem)
+class StartupService @Inject()(node: Client, system: ActorSystem, procedures: Procedures)
                               (implicit ec: ExecutionContext) {
 
   private val logger: Logger = Logger(this.getClass)
@@ -17,12 +18,12 @@ class StartupService @Inject()(node: Client, system: ActorSystem)
   logger.info("App started!")
   node.setClient()
 
-  val jobs: ActorRef = system.actorOf(Props(new Jobs()), "scheduler")
+  val jobs: ActorRef = system.actorOf(Props(new Jobs(procedures)), "scheduler")
 
   system.scheduler.scheduleAtFixedRate(
     initialDelay = 2.seconds,
-    interval = 60.seconds,
+    interval = 120.seconds,
     receiver = jobs,
-    message = JobsUtil.create
+    message = JobsUtil.merge
   )
 }

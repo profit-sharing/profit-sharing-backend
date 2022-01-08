@@ -1,18 +1,21 @@
 package services
 
+import ProfitSharing.Procedures
 import akka.actor.{Actor, ActorLogging}
 import play.api.Logger
 
 object JobsUtil {
-  val create = "create"
+  val merge = "merge"
 }
 
-class Jobs()
+class Jobs(procedures: Procedures)
   extends Actor with ActorLogging {
   private val logger: Logger = Logger(this.getClass)
 
   def receive = {
-    case JobsUtil.create =>
-      logger.info(s"Creation Thread started")
+    case JobsUtil.merge =>
+      logger.info(s"Merge Income Thread started")
+      procedures.mergeIncomes()
+      logger.info(s"Merge Income Thread finished working")
   }
 }
