@@ -1,4 +1,4 @@
-package Services
+package services
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import network.Client

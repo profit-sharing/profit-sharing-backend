@@ -3,22 +3,24 @@ package helpers
 import java.io.{PrintWriter, StringWriter}
 import javax.inject.{Inject, Singleton}
 import io.circe.{Json => ciJson}
+
 import java.util.Calendar
 import io.kinoplan.emailaddress.EmailAddress
 import play.api.Logger
 import play.api.libs.json._
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Seq
 import scala.util.Try
-
 import network.{Client, Explorer}
-import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoClientException, ErgoType, ErgoValue, InputBox, JavaHelpers, SignedTransaction}
+import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoClientException, ErgoContract, ErgoType, ErgoValue, InputBox, JavaHelpers, SignedTransaction}
 import special.collection.Coll
 import org.ergoplatform.ErgoAddress
 import sigmastate.serialization.ErgoTreeSerializer
 import network.Request
 import play.api.Logger
 import play.api.libs.json._
+import scorex.crypto.hash.Digest32
 
 
 final case class failedTxException(private val message: String = "Tx sending failed") extends Throwable(message)
@@ -50,6 +52,15 @@ class Utils @Inject()(client: Client, explorer: Explorer) {
   def longListToErgoValue(elements: Array[Long]): ErgoValue[Coll[Long]] = {
     val longColl = JavaHelpers.SigmaDsl.Colls.fromArray(elements)
     ErgoValue.of(longColl, ErgoType.longType())
+  }
+
+  def getContractScriptHash(contract: ErgoContract): Digest32 = {
+    scorex.crypto.hash.Blake2b256(contract.getErgoTree.bytes)
+  }
+
+  def getContractAddress(contract: ErgoContract): String = {
+    val ergoTree = contract.getErgoTree
+    Configs.addressEncoder.fromProposition(ergoTree).get.toString
   }
 
   def JsonToTransaction(txJson: JsValue, ctx: BlockchainContext): SignedTransaction ={
