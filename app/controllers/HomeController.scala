@@ -1,15 +1,17 @@
 package controllers
 
+import ProfitSharing.Procedures
 import network.Client
 import play.api.Logger
 import play.api.libs.circe.Circe
 import play.api.mvc._
+
 import javax.inject._
 import io.circe.Json
 
 
 @Singleton
-class HomeController @Inject()(assets: Assets, client: Client, val controllerComponents: ControllerComponents) extends BaseController
+class HomeController @Inject()(assets: Assets, client: Client, procedures: Procedures, val controllerComponents: ControllerComponents) extends BaseController
   with Circe {
   private val logger: Logger = Logger(this.getClass)
 
@@ -24,6 +26,27 @@ class HomeController @Inject()(assets: Assets, client: Client, val controllerCom
   def exception(e: Throwable): Result = {
     logger.warn(e.getMessage)
     BadRequest(s"""{"success": false, "message": "${e.getMessage}"}""").as("application/json")
+  }
+
+  /**
+   * @return service initialization
+   * You need to update the service config after this initialization
+   */
+  def serviceInitialization(): Action[AnyContent] = Action {
+    val response = procedures.serviceInitialization()
+    var result: Json = null
+    if(response.isEmpty)
+      result = Json.fromFields(List(
+        ("status", Json.fromString("Error"))
+      ))
+    else
+      result = Json.fromFields(List(
+        ("status", Json.fromString("Ok")),
+        ("configNFT", Json.fromString(response.head)),
+        ("distributionToken", Json.fromString(response(1))),
+        ("lockingToken", Json.fromString(response(2)))
+      ))
+    Ok(result.toString()).as("application/json")
   }
 
   /**

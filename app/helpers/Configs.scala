@@ -1,7 +1,9 @@
 package helpers
 
 import org.ergoplatform.ErgoAddressEncoder
-import org.ergoplatform.appkit.NetworkType
+import org.ergoplatform.appkit.{Address, NetworkType}
+
+import java.math.BigInteger
 
 object Configs extends ConfigHelper {
   lazy val nodeUrl: String = readKey("node.url").replaceAll("/$", "")
@@ -14,6 +16,13 @@ object Configs extends ConfigHelper {
   lazy val maxFee: Long = readKey("fee.max", "1000000").toLong
   lazy val minBoxErg: Long = readKey("minBoxErg").toLong
   lazy val infBoxVal: Long = readKey("infBoxVal").toLong
+
+  object initializer{
+    lazy val address: Address =  Address.create(readKey("initializer.address"))
+    lazy val secret: BigInteger = BigInt(readKey("initializer.secret"), 16).bigInteger
+    lazy val distributionCount: Long = readKey("initializer.distributionCount").toLong
+    lazy val lockingCount: Long = readKey("initializer.lockingCount").toLong
+  }
 
   object incomeMerge{
     lazy val min: Long = readKey("incomeMerge.min").toLong
