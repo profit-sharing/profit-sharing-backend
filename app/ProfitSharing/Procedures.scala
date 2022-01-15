@@ -34,7 +34,9 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       .sendChangeTo(address.getErgoAddress)
       .build()
 
-    val prover = ctx.newProverBuilder().build()
+    val prover = ctx.newProverBuilder()
+      .withDLogSecret(Configs.initializer.secret)
+      .build()
     var signedTx: SignedTransaction = null
     try {
       signedTx = prover.sign(tx)
@@ -80,7 +82,9 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
         .sendChangeTo(contracts.incomeAddress.getErgoAddress)
         .build()
 
-      val prover = ctx.newProverBuilder().build()
+      val prover = ctx.newProverBuilder()
+        .withDLogSecret(Configs.initializer.secret)
+        .build()
       var signedTx: SignedTransaction = null
       try {
         signedTx = prover.sign(tx)
@@ -145,7 +149,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       signedTx
   }
 
-  def mergeIncomes(): Unit = {
+  def mergeIncomes(): Unit = try{
     client.getClient.execute(ctx => {
       val incomes = boxes.getIncomes
       for(incomeSet <- incomes) {
@@ -158,6 +162,9 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
         }
       }
     })
+  } catch {
+    case _: java.lang.NullPointerException => logger.info("No incomes found in the network")
+    case e: Throwable => logger.error(utils.getStackTraceStr(e))
   }
 
 }
