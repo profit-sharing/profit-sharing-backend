@@ -3,6 +3,7 @@
 
 GET     /                                            controllers.HomeController.index
 GET     /api/info                                    controllers.HomeController.info
+GET     /api/service/initialization                      controllers.HomeController.serviceInitialization
 GET     /*file                                       controllers.HomeController.assetOrDefault(file)
 
 # Map static resources from the /public folder to the /assets URL path
