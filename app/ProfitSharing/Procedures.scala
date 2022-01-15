@@ -115,38 +115,39 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
   }
 
   def mergeIncomesTx(incomes: Seq[InputBox], ctx: BlockchainContext): SignedTransaction = {
-      val txB = ctx.newTxBuilder()
+    val txB = ctx.newTxBuilder()
 
-      val totalValue: Long = incomes.map(item => item.getValue).reduce((a, b) => a + b)
-      var outIncome = txB.outBoxBuilder()
-        .value(totalValue - Configs.maxFee)
-        .contract(contracts.income)
+    val totalValue: Long = incomes.map(item => item.getValue).reduce((a, b) => a + b)
+    val fee: Long = incomes.size * Configs.incomeMerge.boxSize * Configs.feePerByte
+    var outIncome = txB.outBoxBuilder()
+      .value(totalValue - fee)
+      .contract(contracts.income)
 
-      if(incomes.head.getTokens.size() > 0) {
-        val tokenId: String = incomes.head.getTokens.get(0).getId.toString
-        val totalTokens: Long = incomes.map(item => item.getTokens.get(0).getValue).sum
-        outIncome = outIncome.tokens(new ErgoToken(tokenId, totalTokens))
-      }
-      val outIncomeBox = outIncome.build()
+    if(incomes.head.getTokens.size() > 0) {
+      val tokenId: String = incomes.head.getTokens.get(0).getId.toString
+      val totalTokens: Long = incomes.map(item => item.getTokens.get(0).getValue).sum
+      outIncome = outIncome.tokens(new ErgoToken(tokenId, totalTokens))
+    }
+    val outIncomeBox = outIncome.build()
 
-      val tx = txB.boxesToSpend(incomes.asJava)
-        .fee(Configs.maxFee)
-        .outputs(outIncomeBox)
-        .sendChangeTo(contracts.incomeAddress.getErgoAddress)
-        .build()
+    val tx = txB.boxesToSpend(incomes.asJava)
+      .fee(fee)
+      .outputs(outIncomeBox)
+      .sendChangeTo(contracts.incomeAddress.getErgoAddress)
+      .build()
 
-      val prover = ctx.newProverBuilder().build()
-      var signedTx: SignedTransaction = null
-      try {
-        signedTx = prover.sign(tx)
-      } catch {
-        case e: Throwable =>
-          logger.error(utils.getStackTraceStr(e))
-          logger.error(s"merge tx proving failed")
-          throw proveException()
-      }
-      logger.info(s"${incomes.size} Incomes with total value of $totalValue merged successfully")
-      signedTx
+    val prover = ctx.newProverBuilder().build()
+    var signedTx: SignedTransaction = null
+    try {
+      signedTx = prover.sign(tx)
+    } catch {
+      case e: Throwable =>
+        logger.error(utils.getStackTraceStr(e))
+        logger.error(s"merge tx proving failed")
+        throw proveException()
+    }
+    logger.info(s"${incomes.size} Incomes with total value of $totalValue merged successfully")
+    signedTx
   }
 
   def mergeIncomes(): Unit = try{

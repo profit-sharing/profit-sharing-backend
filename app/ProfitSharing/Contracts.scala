@@ -18,7 +18,7 @@ class Contracts @Inject()(client: Client, utils: Utils){
   private def generateIncomeContract(): ErgoContract ={
     client.getClient.execute(ctx => {
       ctx.compileContract(ConstantsBuilder.create()
-        .item("maxFee", Configs.maxFee)
+        .item("maxFee", Configs.incomeMerge.maxFee)
         .item("minInputMerge", Configs.incomeMerge.min)
         .item("maxInputMerge", Configs.incomeMerge.max)
         .item("configNFT", ErgoId.create(Configs.token.configNFT).getBytes)

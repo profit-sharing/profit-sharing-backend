@@ -14,6 +14,7 @@ object Configs extends ConfigHelper {
 
   lazy val fee: Long = readKey("fee.default").toLong
   lazy val maxFee: Long = readKey("fee.max", "1000000").toLong
+  lazy val feePerByte: Long = readKey("fee.preByte").toLong
   lazy val minBoxErg: Long = readKey("minBoxErg").toLong
   lazy val infBoxVal: Long = readKey("infBoxVal").toLong
 
@@ -28,6 +29,8 @@ object Configs extends ConfigHelper {
     lazy val min: Int = readKey("incomeMerge.minBox").toInt
     lazy val max: Int = readKey("incomeMerge.maxBox").toInt
     lazy val interval: Int = readKey("incomeMerge.timeInterval").toInt
+    lazy val boxSize: Int = readKey("incomeMerge.boxSize").toInt
+    lazy val maxFee: Long = feePerByte * max
   }
 
   object token{
