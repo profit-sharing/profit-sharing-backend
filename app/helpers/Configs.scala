@@ -25,8 +25,9 @@ object Configs extends ConfigHelper {
   }
 
   object incomeMerge{
-    lazy val min: Long = readKey("incomeMerge.min").toLong
-    lazy val max: Long = readKey("incomeMerge.max").toLong
+    lazy val min: Int = readKey("incomeMerge.minBox").toInt
+    lazy val max: Int = readKey("incomeMerge.maxBox").toInt
+    lazy val interval: Int = readKey("incomeMerge.timeInterval").toInt
   }
 
   object token{

@@ -2,6 +2,7 @@ package services
 
 import ProfitSharing.Procedures
 import akka.actor.{ActorRef, ActorSystem, Props}
+import helpers.Configs
 import network.Client
 import play.api.Logger
 
@@ -22,7 +23,7 @@ class StartupService @Inject()(node: Client, system: ActorSystem, procedures: Pr
 
   system.scheduler.scheduleAtFixedRate(
     initialDelay = 2.seconds,
-    interval = 120.seconds,
+    interval = Configs.incomeMerge.interval.seconds,
     receiver = jobs,
     message = JobsUtil.merge
   )

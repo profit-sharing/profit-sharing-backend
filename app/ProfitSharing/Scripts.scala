@@ -9,8 +9,8 @@ object Scripts {
        |    // INPUTS: incomes[10,100) --> OUTPUTS: income
        |    val incomeMerge =
        |      allOf(Coll(
-       |        INPUTS.size >= 10,
-       |        INPUTS.size < 100,
+       |        INPUTS.size >= minInputMerge,
+       |        INPUTS.size < maxInputMerge,
        |        OUTPUTS(0).propositionBytes == SELF.propositionBytes,
        |        OUTPUTS(1).value <= maxFee
        |        // ERG can not burn so more checking is not required

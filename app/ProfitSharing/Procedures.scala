@@ -79,7 +79,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       val tx = txB.boxesToSpend(Seq(configNFTTx.getOutputsToSpend.get(1), distTokenTx.getOutputsToSpend.get(1), lockingTokenTx.getOutputsToSpend.get(1)).asJava)
         .fee(Configs.fee)
         .outputs(configBox)
-        .sendChangeTo(contracts.incomeAddress.getErgoAddress)
+        .sendChangeTo(Configs.initializer.address.getErgoAddress)
         .build()
 
       val prover = ctx.newProverBuilder()
@@ -119,7 +119,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
 
       val totalValue: Long = incomes.map(item => item.getValue).reduce((a, b) => a + b)
       var outIncome = txB.outBoxBuilder()
-        .value(totalValue - Configs.fee)
+        .value(totalValue - Configs.maxFee)
         .contract(contracts.income)
 
       if(incomes.head.getTokens.size() > 0) {
@@ -130,7 +130,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       val outIncomeBox = outIncome.build()
 
       val tx = txB.boxesToSpend(incomes.asJava)
-        .fee(Configs.fee)
+        .fee(Configs.maxFee)
         .outputs(outIncomeBox)
         .sendChangeTo(contracts.incomeAddress.getErgoAddress)
         .build()
@@ -151,19 +151,20 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
 
   def mergeIncomes(): Unit = try{
     client.getClient.execute(ctx => {
+      logger.debug(s"income address is ${contracts.incomeAddress}")
       val incomes = boxes.getIncomes
-      for(incomeSet <- incomes) {
-        val signedTx = mergeIncomesTx(incomeSet, ctx)
-        var txId = ctx.sendTransaction(signedTx)
-        if (txId == null) logger.error(s"Merge transaction sending failed")
-        else {
-          txId = txId.replaceAll("\"", "")
-          logger.info(s"Merge Transaction Sent with TxId: " + txId)
+      if(incomes.nonEmpty)
+        for(incomeSet <- incomes) {
+          val signedTx = mergeIncomesTx(incomeSet, ctx)
+          var txId = ctx.sendTransaction(signedTx)
+          if (txId == null) logger.error(s"Merge transaction sending failed")
+          else {
+            txId = txId.replaceAll("\"", "")
+            logger.info(s"Merge Transaction Sent with TxId: " + txId)
+          }
         }
-      }
     })
   } catch {
-    case _: java.lang.NullPointerException => logger.info("No incomes found in the network")
     case e: Throwable => logger.error(utils.getStackTraceStr(e))
   }
 
