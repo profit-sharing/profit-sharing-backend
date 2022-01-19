@@ -8,7 +8,14 @@ import scalaj.http.{BaseHttp, HttpConstants}
 import scala.util.{Failure, Success, Try}
 
 object Request{
-  object RaffleHttp extends BaseHttp (None, HttpConstants.defaultOptions, HttpConstants.utf8, 4096, "Mozilla/5.0 (X11; OpenBSD amd64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.81 Safari/537.36", true)
+  object RaffleHttp extends BaseHttp (
+    None,
+    HttpConstants.defaultOptions,
+    HttpConstants.utf8,
+    4096,
+    "Mozilla/5.0 (X11; OpenBSD amd64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.81 Safari/537.36",
+    true
+  )
   private val defaultHeader: Seq[(String, String)] = Seq[(String, String)](("Accept", "application/json"))
   private val defaultPostHeader: Seq[(String, String)] = Seq[(String, String)](("Accept", "application/json"), ("Content-Type", "application/json"))
   def httpGetWithError(url: String, headers: Seq[(String, String)] = defaultHeader): Either[Throwable, Json] = {

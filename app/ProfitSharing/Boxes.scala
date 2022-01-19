@@ -2,7 +2,7 @@ package ProfitSharing
 
 import helpers.{Configs, Utils}
 import network.Client
-import org.ergoplatform.appkit.InputBox
+import org.ergoplatform.appkit.{ErgoToken, InputBox, OutBox, UnsignedTransactionBuilder}
 
 import javax.inject.{Inject, Singleton}
 
@@ -22,5 +22,16 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts) {
       }
     }
     result
+  }
+
+  def createConfig(txB: UnsignedTransactionBuilder, configNFT: String, distributionToken: String, lockingToken: String): OutBox ={
+    txB.outBoxBuilder()
+      .value(Configs.fee*2)
+      .contract(contracts.config)
+      .tokens(new ErgoToken(configNFT, 1),
+        new ErgoToken(distributionToken, Configs.initializer.distributionCount),
+        new ErgoToken(lockingToken, Configs.initializer.lockingCount))
+      .registers(utils.longListToErgoValue(Array(1, 1e9.toLong, 10, 0, 0, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
+      .build()
   }
 }

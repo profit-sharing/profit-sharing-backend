@@ -48,7 +48,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
     }
     logger.info(s" token $name issued successfully")
     val txId = ctx.sendTransaction(signedTx)
-    if (txId == null) logger.error(s"Merge transaction sending failed")
+    if (txId == null) logger.error(s"Token Issue transaction sending failed")
     signedTx
   }
 
@@ -67,14 +67,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       logger.info(s"locking Token: $lockingToken")
 
       val txB = ctx.newTxBuilder()
-      val configBox = txB.outBoxBuilder()
-        .value(Configs.fee*2)
-        .contract(contracts.config)
-        .tokens(new ErgoToken(configNFT, 1),
-          new ErgoToken(distributionToken, Configs.initializer.distributionCount),
-          new ErgoToken(lockingToken, Configs.initializer.lockingCount))
-        .registers(utils.longListToErgoValue(Array(1, 1e9.toLong, 10, 0, 0, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
-        .build()
+      val configBox = boxes.createConfig(txB, configNFT, distributionToken, lockingToken)
 
       val tx = txB.boxesToSpend(Seq(configNFTTx.getOutputsToSpend.get(1), distTokenTx.getOutputsToSpend.get(1), lockingTokenTx.getOutputsToSpend.get(1)).asJava)
         .fee(Configs.fee)
@@ -96,7 +89,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       }
       val txId = ctx.sendTransaction(signedTx)
       if (txId == null) {
-        logger.error(s"Merge transaction sending failed")
+        logger.error(s"config creation tx sending failed")
         List()
       }
       else {
