@@ -3,7 +3,7 @@ package ProfitSharing
 import helpers.{Configs, Utils, failedTxException, proveException}
 import network.Client
 import org.ergoplatform.appkit.impl.ErgoTreeContract
-import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoToken, InputBox, SignedTransaction}
+import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoToken, ErgoValue, InputBox, SignedTransaction}
 import play.api.Logger
 
 import javax.inject.{Inject, Singleton}
@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
 class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, utils: Utils) {
   private val logger: Logger = Logger(this.getClass)
 
-  def tokenIssueTx(ctx: BlockchainContext, count: Long, inputs: Seq[InputBox], address: Address, name: String): SignedTransaction ={
+  def tokenIssueTx(ctx: BlockchainContext, count: Long, inputs: Seq[InputBox], address: Address, name: String, description: String): SignedTransaction ={
     val txB = ctx.newTxBuilder()
 
     val totalValue: Long = inputs.map(item => item.getValue).reduce((a, b) => a + b)
@@ -25,6 +25,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
     val outToken = txB.outBoxBuilder()
       .value(Configs.fee)
       .tokens(new ErgoToken(inputs.head.getId, count))
+      .registers(ErgoValue.of(name.getBytes("utf-8")), ErgoValue.of(description.getBytes("utf-8")), ErgoValue.of("0".getBytes("utf-8")))
       .contract(new ErgoTreeContract(address.getErgoAddress.script))
       .build()
 
@@ -55,9 +56,9 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
   def serviceInitialization(): List[String] = try{
     client.getClient.execute(ctx =>{
       val initialBox = client.getCoveringBoxesFor(Configs.initializer.address, Configs.fee * 8).getBoxes.asScala
-      val configNFTTx: SignedTransaction = tokenIssueTx(ctx, 1, initialBox, Configs.initializer.address, "ErgoProfitSharing, ConfigNFT")
-      val distTokenTx = tokenIssueTx(ctx, Configs.initializer.distributionCount, Seq(configNFTTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, DistributionToken")
-      val lockingTokenTx = tokenIssueTx(ctx, Configs.initializer.lockingCount, Seq(distTokenTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, LockingToken")
+      val configNFTTx: SignedTransaction = tokenIssueTx(ctx, 1, initialBox, Configs.initializer.address, "ErgoProfitSharing, ConfigNFT", "ErgoProfitSharing, ConfigNFT")
+      val distTokenTx = tokenIssueTx(ctx, Configs.initializer.distributionCount, Seq(configNFTTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, DistributionToken", "ErgoProfitSharing, DistributionToken")
+      val lockingTokenTx = tokenIssueTx(ctx, Configs.initializer.lockingCount, Seq(distTokenTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, LockingToken", "ErgoProfitSharing, LockingToken")
 
       val configNFT = configNFTTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
       val distributionToken = distTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
