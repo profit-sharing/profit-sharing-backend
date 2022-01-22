@@ -4,6 +4,10 @@ object Scripts {
 
   lazy val incomeScript: String =
     s"""{
+       |  val maxFee = MAX_FEE
+       |  val minInputMerge = MIN_INPUT_MERGE
+       |  val maxInputMerge = MAX_INPUT_MERGE
+       |  val configNFT = fromBase64("CONFIG_NFT")
        |  if(OUTPUTS.size == 2) {
        |    // merging income boxes
        |    // INPUTS: incomes[10,100) --> OUTPUTS: income
@@ -50,6 +54,9 @@ object Scripts {
   // Tokens 0: DistributionToken, 1: IncomeToken (optional)
   lazy val distributionScript: String =
   s"""{
+     |  val configNFT = fromBase64("CONFIG_NFT")
+     |  val lockingToken = fromBase64("LOCKING_TOKEN")
+     |  val stakingToken = fromBase64("STAKING_TOKEN")
      |  val checkpoint = SELF.R4[Coll[Long]].get(0)
      |  val ergShare = SELF.R4[Coll[Long]].get(1)
      |  val tokenShare = SELF.R4[Coll[Long]].get(2)
@@ -111,6 +118,8 @@ object Scripts {
   // Tokens 0: LockingToken, 1: StakingToken
   lazy val ticketScript: String =
   s"""{
+     |  val configNFT = fromBase64("CONFIG_NFT")
+     |  val distributionToken = fromBase64("DISTRIBUTION_TOKEN")
      |  val checkpoint = SELF.R4[Coll[Long]].get(1)
      |  val fee = SELF.R4[Coll[Long]].get(2)
      |  val minBoxVal = SELF.R4[Coll[Long]].get(3)

@@ -14,7 +14,7 @@ object Configs extends ConfigHelper {
 
   lazy val fee: Long = readKey("fee.default").toLong
   lazy val maxFee: Long = readKey("fee.max", "1000000").toLong
-  lazy val feePerByte: Long = readKey("fee.preByte").toLong
+  lazy val feePerByte: Long = readKey("fee.perByte").toLong
   lazy val minBoxErg: Long = readKey("minBoxErg").toLong
   lazy val infBoxVal: Long = readKey("infBoxVal").toLong
 

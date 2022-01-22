@@ -3,6 +3,7 @@ package ProfitSharing
 import org.ergoplatform.appkit.{Address, ConstantsBuilder, ErgoContract, ErgoId}
 import helpers.{Configs, Utils}
 import network.Client
+import scorex.util.encode.{Base16, Base64}
 
 import javax.inject.{Inject, Singleton}
 
@@ -17,43 +18,43 @@ class Contracts @Inject()(client: Client, utils: Utils){
 
   private def generateIncomeContract(): ErgoContract ={
     client.getClient.execute(ctx => {
-      ctx.compileContract(ConstantsBuilder.create()
-        .item("maxFee", Configs.incomeMerge.maxFee)
-        .item("minInputMerge", Configs.incomeMerge.min)
-        .item("maxInputMerge", Configs.incomeMerge.max)
-        .item("configNFT", ErgoId.create(Configs.token.configNFT).getBytes)
-        .build(), Scripts.incomeScript)
+      val script = Scripts.incomeScript
+        .replace("MAX_FEE", Configs.incomeMerge.maxFee.toString)
+        .replace("MIN_INPUT_MERGE", Configs.incomeMerge.min.toString)
+        .replace("MAX_INPUT_MERGE", Configs.incomeMerge.max.toString)
+        .replace("CONFIG_NFT", Base64.encode(Base16.decode(Configs.token.configNFT).get))
+      ctx.compileContract(ConstantsBuilder.create().build(), script)
     })
   }
 
   private def generateDistributionContract(): ErgoContract ={
     client.getClient.execute(ctx => {
-      ctx.compileContract(ConstantsBuilder.create()
-        .item("configNFT", ErgoId.create(Configs.token.configNFT).getBytes)
-        .item("lockingToken", ErgoId.create(Configs.token.locking).getBytes)
-        .item("stakingToken", ErgoId.create(Configs.token.staking).getBytes)
-        .build(), Scripts.distributionScript)
+      val script = Scripts.distributionScript
+        .replace("CONFIG_NFT", Base64.encode(Base16.decode(Configs.token.configNFT).get))
+        .replace("LOCKING_TOKEN", Base64.encode(Base16.decode(Configs.token.locking).get))
+        .replace("STAKING_TOKEN", Base64.encode(Base16.decode(Configs.token.staking).get))
+      ctx.compileContract(ConstantsBuilder.create().build(), script)
     })
   }
 
   private def generateTicketContract(): ErgoContract ={
     client.getClient.execute(ctx => {
-      ctx.compileContract(ConstantsBuilder.create()
-        .item("configNFT", ErgoId.create(Configs.token.configNFT).getBytes)
-        .item("distributionToken", ErgoId.create(Configs.token.distribution).getBytes)
-        .build(), Scripts.ticketScript)
+      val script = Scripts.ticketScript
+        .replace("CONFIG_NFT", Base64.encode(Base16.decode(Configs.token.configNFT).get))
+        .replace("DISTRIBUTION_TOKEN", Base64.encode(Base16.decode(Configs.token.distribution).get))
+      ctx.compileContract(ConstantsBuilder.create().build(), script)
     })
   }
 
   private def generateConfigContract(): ErgoContract ={
     client.getClient.execute(ctx => {
-      ctx.compileContract(ConstantsBuilder.create()
-        .item("distributionToken", ErgoId.create(Configs.token.distribution).getBytes)
-        .item("lockingToken", ErgoId.create(Configs.token.locking).getBytes)
-        .item("stakingToken", ErgoId.create(Configs.token.staking).getBytes)
-        .item("distributionHash", utils.getContractScriptHash(distribution))
-        .item("ticketHash", utils.getContractScriptHash(ticket))
-        .build(), Scripts.configScript)
+      val script = Scripts.configScript
+        .replace("DISTRIBUTION_TOKEN", Base64.encode(Base16.decode(Configs.token.distribution).get))
+        .replace("LOCKING_TOKEN", Base64.encode(Base16.decode(Configs.token.locking).get))
+        .replace("STAKING_TOKEN", Base64.encode(Base16.decode(Configs.token.staking).get))
+        .replace("DISTRIBUTION_HASH", Base64.encode(utils.getContractScriptHash(distribution)))
+        .replace("TICKET_HASH", Base64.encode(utils.getContractScriptHash(ticket)))
+      ctx.compileContract(ConstantsBuilder.create().build(), script)
     })
   }
 
