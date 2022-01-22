@@ -59,7 +59,6 @@ class Explorer() {
       Json.Null
   }
 
-  // TODO: use this function instead of utils.checkTransaction
   /**
    * @param txId transaction id
    * @return -1 if tx does not exist, 0 if it is unconfirmed, otherwise, confirmation num
@@ -83,6 +82,10 @@ class Explorer() {
       throw connectionException()
   }
 
+  /**
+   * @param tokenId token id to search for
+   * @return list of unspent boxes containing the token
+   */
   def getUnspentTokenBoxes(tokenId: String, offset: Int, limit: Int): Json = try {
     Request.httpGet(s"$unspentBoxesByTokenId/$tokenId?offset=$offset&limit=$limit")
   } catch {
@@ -94,6 +97,10 @@ class Explorer() {
       throw connectionException()
   }
 
+  /**
+   * @param tokenId token id to search for
+   * @return list of all boxes(spent and unspent) containing the token
+   */
   def getAllTokenBoxes(tokenId: String, offset: Int, limit: Int): Json = try {
     Request.httpGet(s"$allBoxesByTokenId/$tokenId?offset=$offset&limit=$limit")
   } catch {
@@ -105,6 +112,10 @@ class Explorer() {
       throw connectionException()
   }
 
+  /**
+   * @param boxId required box id
+   * @return a box with that id in the network
+   */
   def getUnspentBoxByID(boxId: String): Json = try {
     Request.httpGet(s"$boxesP1/$boxId")
   } catch {
@@ -116,41 +127,12 @@ class Explorer() {
       throw connectionException()
   }
 
+  /**
+   * @param address address to search for
+   * @return list of unconfirmed transactions belonging to the address
+   */
   def getUnconfirmedTxByAddress(address: String): Json = try {
     Request.httpGet(s"$unconfirmedTx/byAddress/$address/?offset=0&limit=100")
-  } catch {
-    case e: requestException =>
-      logger.warn(e.getMessage)
-      throw connectionException()
-    case e: Throwable =>
-      logger.error(e.getMessage)
-      throw connectionException()
-  }
-
-  def getBoxesByErgoTree(ergoTree: ErgoTree, tokenId: String): Json = try {
-    val ergoTreeTemplateHash = scorex.crypto.hash.Sha256(ErgoTreeTemplate.fromErgoTree(ergoTree).getBytes).map("%02x".format(_)).mkString
-    val json = Json.fromFields(List(
-      ("ergoTreeTemplateHash", Json.fromString(ergoTreeTemplateHash)),
-      ("assets", Json.fromValues(Array(Json.fromString(tokenId)))),
-    ))
-    Request.httpPost(boxSearch, json.toString())
-  } catch {
-    case e: requestException =>
-      logger.warn(e.getMessage)
-      throw connectionException()
-    case e: Throwable =>
-      logger.error(e.getMessage)
-      throw connectionException()
-  }
-
-  def getTicketsByWallet(ticketErgoTree: ErgoTree, address: String): Json = try{
-    val ergoTreeTemplateHash = scorex.crypto.hash.Sha256(ErgoTreeTemplate.fromErgoTree(ticketErgoTree).getBytes).map("%02x".format(_)).mkString
-    val wallet = Address.create(address).getErgoAddress.script.bytes.map("%02x".format(_)).mkString
-    val json = Json.fromFields(List(
-      ("ergoTreeTemplateHash", Json.fromString(ergoTreeTemplateHash)),
-      ("registers", Json.fromFields(List(("R4", Json.fromString(wallet)))))
-    ))
-    Request.httpPost(boxSearch, json.toString())
   } catch {
     case e: requestException =>
       logger.warn(e.getMessage)

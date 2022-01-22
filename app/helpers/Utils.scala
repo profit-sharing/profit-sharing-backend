@@ -109,54 +109,6 @@ class Utils @Inject()(client: Client, explorer: Explorer) {
       throw internalException()
   }
 
-  def checkTransaction(txId: String): Int = {
-    try {
-      if (txId != "") {
-        val unconfirmedTx = explorer.getUnconfirmedTx(txId)
-        if (unconfirmedTx == ciJson.Null) {
-          val confirmedTx = explorer.getConfirmedTx(txId)
-          if (confirmedTx == ciJson.Null) {
-            0 // resend transaction
-          } else {
-            1 // transaction mined
-          }
-        } else {
-          2 // transaction already in mempool
-        }
-      } else {
-        0
-      }
-    } catch {
-      case e: connectionException => throw e
-      case e: Throwable =>
-        logger.error(getStackTraceStr(e))
-        throw internalException()
-    }
-  }
-
-  def isBoxInMemPool(box: InputBox) : Boolean = {
-    try {
-      val address = getAddress(box.getErgoTree.bytes)
-      val transactions = Json.parse(explorer.getTxsInMempoolByAddress(address.toString).toString())
-      if (transactions != null) {
-        (transactions \ "items").as[List[JsValue]].exists(tx =>{
-          if((tx \ "inputs").as[JsValue].toString().contains(box.getId.toString)) true
-          else false
-        })
-      } else {
-        false
-      }
-    } catch {
-      case e: connectionException => throw e
-      case e: JsResultException =>
-        logger.error(e.getMessage)
-        throw internalException()
-      case e: Throwable =>
-        logger.error(getStackTraceStr(e))
-        throw internalException()
-    }
-  }
-
   def currentTime: Long = Calendar.getInstance().getTimeInMillis / 1000
 
   def getTransactionFrontLink(txId: String): String = Configs.explorerFront + "/en/transactions/" + txId
