@@ -65,12 +65,13 @@ class Utils @Inject()(client: Client, explorer: Explorer) {
     val outputs = (txJson \ "outputs").as[JsValue].toString().replaceAll("id", "boxId").replaceAll("txId", "transactionId")
     val dataInputs = (txJson\ "dataInputs").as[JsValue].toString()
     val id = (txJson \ "id").as[String]
-    val newJson = s"""{
-          "id" : "${id}",
-          "inputs" : ${inputs},
-          "dataInputs" : ${dataInputs},
-          "outputs" : ${outputs}
-          }"""
+    val newJson = ciJson.fromFields(List(
+      ("id", ciJson.fromString(id)),
+      ("inputs", ciJson.fromString(inputs)),
+      ("dataInputs", ciJson.fromString(dataInputs)),
+      ("outputs", ciJson.fromString(outputs))
+    )).toString()
+
     ctx.signedTxFromJson(newJson.replaceAll("null", "\"\""))
   }
 
