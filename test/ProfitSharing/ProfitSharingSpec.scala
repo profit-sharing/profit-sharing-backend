@@ -55,10 +55,10 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   })
 
   val mockedCtx: BlockchainContext = mock(classOf[BlockchainContext])
-  when(mockedCtx.newTxBuilder()).thenReturn({
+  when(mockedCtx.newTxBuilder()).thenAnswer(_ => {
     client.getClient.execute(_.newTxBuilder())
   })
-  when(mockedCtx.newProverBuilder()).thenReturn({
+  when(mockedCtx.newProverBuilder()).thenAnswer(_ => {
     client.getClient.execute(_.newProverBuilder())
   })
   when(mockedCtx.sendTransaction(any())).thenReturn(randomId())
@@ -88,11 +88,11 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   }
 
   /*
-  * Testing the getIncomes function
+  * Testing the tokenIssueTx function
   * It should return a transaction that issued a new token with specified details
   * The Input is mocked with unreal box
    */
-  property("Testing token issue") {
+  property("Testing token issue tx") {
     val procedures = createProcedureObject
     val mockedInputBox = mockedCtx.newTxBuilder().outBoxBuilder()
       .value(1e9.toLong)
@@ -104,6 +104,30 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     tx.getOutputsToSpend.get(1).getValue should be (Configs.fee)
     tx.getOutputsToSpend.get(1).getTokens.get(0).getValue should be (10)
     tx.getOutputsToSpend.get(2).getValue should be (Configs.fee)
+  }
+
+  /*
+  * Testing the mergeIncomesTx function
+  * It should return a transaction that merged the required boxes into one
+  * The Input is mocked with unreal boxes
+   */
+  property("Testing merge income tx") {
+    val procedures = createProcedureObject
+    var inputList: List[InputBox] = List()
+    val txB = mockedCtx.newTxBuilder()
+    for(i <- 1 to Configs.incomeMerge.min) {
+      inputList = inputList :+ txB.outBoxBuilder()
+        .value((1e9 * 0.1).toLong)
+        .contract(contracts.income)
+        .tokens(new ErgoToken(tokenId1, 10))
+        .build().convertToInputWith(randomId(), 1)
+    }
+    val tx = procedures.mergeIncomesTx(inputList, mockedCtx)
+    tx.getOutputsToSpend.size() should be (2)
+    tx.getOutputsToSpend.get(0).getTokens.size() should be (1)
+    tx.getOutputsToSpend.get(0).getValue.toLong should be >= ((1e9 * 0.1)*Configs.incomeMerge.min - Configs.incomeMerge.maxFee).toLong
+    tx.getOutputsToSpend.get(0).getTokens.get(0).getValue should be (10 * Configs.incomeMerge.min)
+    tx.getOutputsToSpend.get(1).getValue.toLong should be <= Configs.incomeMerge.maxFee
   }
 
 }

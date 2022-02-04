@@ -111,6 +111,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
 
     val totalValue: Long = incomes.map(item => item.getValue).reduce((a, b) => a + b)
     val fee: Long = incomes.size * Configs.incomeMerge.boxSize * Configs.feePerByte
+    logger.debug(s"Calculated fee for merge transaction is $fee and maximum available fee is ${Configs.incomeMerge.maxFee}")
     var outIncome = txB.outBoxBuilder()
       .value(totalValue - fee)
       .contract(contracts.income)
