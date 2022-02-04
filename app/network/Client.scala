@@ -51,7 +51,7 @@ class Client @Inject()() {
 
   /**
    * @param address :Address get a valid address
-   * @return List of input address boxes
+   * @return List of input address boxes (maximum 100 boxes)
    */
   def getUnspentBox(address: Address): List[InputBox] = {
     client.execute(ctx =>
@@ -65,6 +65,10 @@ class Client @Inject()() {
     )
   }
 
+  /**
+   * @param address :Address get a valid address
+   * @return List of all input address boxes
+   */
   def getAllUnspentBox(address: Address): List[InputBox] = {
     client.execute(ctx =>
       try {
@@ -77,6 +81,10 @@ class Client @Inject()() {
     )
   }
 
+  /**
+   * @param address :Address get a valid address
+   * @return List of input address boxes covering the required amount
+   */
   def getCoveringBoxesFor(address: Address, amount: Long): CoveringBoxes = {
     client.execute(ctx =>
       try {

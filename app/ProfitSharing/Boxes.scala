@@ -9,6 +9,10 @@ import javax.inject.{Inject, Singleton}
 @Singleton
 class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts) {
 
+  /**
+   * @return Some list of income boxes ready to merge
+   *         each list contains boxes related to one token type or ERG
+   */
   def getIncomes: List[List[InputBox]] ={
     val boxes = client.getAllUnspentBox(contracts.incomeAddress)
     var result: List[List[InputBox]] = List()
@@ -23,6 +27,9 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts) {
     result
   }
 
+  /**
+   * @return initial config box
+   */
   def createConfig(txB: UnsignedTransactionBuilder, configNFT: String, distributionToken: String, lockingToken: String): OutBox ={
     txB.outBoxBuilder()
       .value(Configs.fee*2)

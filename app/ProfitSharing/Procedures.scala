@@ -53,51 +53,49 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
     signedTx
   }
 
-  def serviceInitialization(): List[String] = try{
-    client.getClient.execute(ctx =>{
-      val initialBox = client.getCoveringBoxesFor(Configs.initializer.address, Configs.fee * 8).getBoxes.asScala
-      val configNFTTx: SignedTransaction = tokenIssueTx(ctx, 1, initialBox, Configs.initializer.address, "ErgoProfitSharing, ConfigNFT", "ErgoProfitSharing, ConfigNFT")
-      val distTokenTx = tokenIssueTx(ctx, Configs.initializer.distributionCount, Seq(configNFTTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, DistributionToken", "ErgoProfitSharing, DistributionToken")
-      val lockingTokenTx = tokenIssueTx(ctx, Configs.initializer.lockingCount, Seq(distTokenTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, LockingToken", "ErgoProfitSharing, LockingToken")
+  def serviceInitialization(ctx: BlockchainContext): List[String] = try{
+    val initialBox = client.getCoveringBoxesFor(Configs.initializer.address, Configs.fee * 8).getBoxes.asScala
+    val configNFTTx: SignedTransaction = tokenIssueTx(ctx, 1, initialBox, Configs.initializer.address, "ErgoProfitSharing, ConfigNFT", "ErgoProfitSharing, ConfigNFT")
+    val distTokenTx = tokenIssueTx(ctx, Configs.initializer.distributionCount, Seq(configNFTTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, DistributionToken", "ErgoProfitSharing, DistributionToken")
+    val lockingTokenTx = tokenIssueTx(ctx, Configs.initializer.lockingCount, Seq(distTokenTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, LockingToken", "ErgoProfitSharing, LockingToken")
 
-      val configNFT = configNFTTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
-      val distributionToken = distTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
-      val lockingToken = lockingTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
-      logger.info(s"Config NFT: $configNFT")
-      logger.info(s"Distribution Token: $distributionToken")
-      logger.info(s"locking Token: $lockingToken")
+    val configNFT = configNFTTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
+    val distributionToken = distTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
+    val lockingToken = lockingTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
+    logger.info(s"Config NFT: $configNFT")
+    logger.info(s"Distribution Token: $distributionToken")
+    logger.info(s"locking Token: $lockingToken")
 
-      val txB = ctx.newTxBuilder()
-      val configBox = boxes.createConfig(txB, configNFT, distributionToken, lockingToken)
+    val txB = ctx.newTxBuilder()
+    val configBox = boxes.createConfig(txB, configNFT, distributionToken, lockingToken)
 
-      val tx = txB.boxesToSpend(Seq(configNFTTx.getOutputsToSpend.get(1), distTokenTx.getOutputsToSpend.get(1), lockingTokenTx.getOutputsToSpend.get(1)).asJava)
-        .fee(Configs.fee)
-        .outputs(configBox)
-        .sendChangeTo(Configs.initializer.address.getErgoAddress)
-        .build()
+    val tx = txB.boxesToSpend(Seq(configNFTTx.getOutputsToSpend.get(1), distTokenTx.getOutputsToSpend.get(1), lockingTokenTx.getOutputsToSpend.get(1)).asJava)
+      .fee(Configs.fee)
+      .outputs(configBox)
+      .sendChangeTo(Configs.initializer.address.getErgoAddress)
+      .build()
 
-      val prover = ctx.newProverBuilder()
-        .withDLogSecret(Configs.initializer.secret)
-        .build()
-      var signedTx: SignedTransaction = null
-      try {
-        signedTx = prover.sign(tx)
-      } catch {
-        case e: Throwable =>
-          logger.error(utils.getStackTraceStr(e))
-          logger.error(s"config creation tx proving failed")
-          throw proveException()
-      }
-      val txId = ctx.sendTransaction(signedTx)
-      if (txId == null) {
-        logger.error(s"config creation tx sending failed")
-        List()
-      }
-      else {
-        logger.info(s" config box created successfully")
-        List(configNFT, distributionToken, lockingToken)
-      }
-    })
+    val prover = ctx.newProverBuilder()
+      .withDLogSecret(Configs.initializer.secret)
+      .build()
+    var signedTx: SignedTransaction = null
+    try {
+      signedTx = prover.sign(tx)
+    } catch {
+      case e: Throwable =>
+        logger.error(utils.getStackTraceStr(e))
+        logger.error(s"config creation tx proving failed")
+        throw proveException()
+    }
+    val txId = ctx.sendTransaction(signedTx)
+    if (txId == null) {
+      logger.error(s"config creation tx sending failed")
+      List()
+    }
+    else {
+      logger.info(s" config box created successfully")
+      List(configNFT, distributionToken, lockingToken)
+    }
   } catch {
     case _: proveException =>
       logger.error("initialization failed")

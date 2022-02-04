@@ -33,7 +33,10 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
    * You need to update the service config after this initialization
    */
   def serviceInitialization(): Action[AnyContent] = Action {
-    val response = procedures.serviceInitialization()
+    var response: List[String] = null
+    client.getClient.execute(ctx => {
+      response = procedures.serviceInitialization(ctx)
+    })
     var result: Json = null
     if(response.isEmpty)
       result = Json.fromFields(List(
