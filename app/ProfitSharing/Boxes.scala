@@ -14,12 +14,11 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts) {
     var result: List[List[InputBox]] = List()
     val ergIncomes = boxes.filter(_.getTokens.size() == 0)
     if(ergIncomes.size >= Configs.incomeMerge.min) result = result :+ ergIncomes.take(Configs.incomeMerge.min)
-    else{
-      val tokens = ergIncomes.filter(_.getTokens.size() > 0).map(_.getTokens.get(0).getId).distinct
-      for(token <- tokens){
-        val tokenIncomes = boxes.filter(_.getTokens.get(0).getId == token)
-        if(tokenIncomes.size >= Configs.incomeMerge.min) result = result :+ tokenIncomes
-      }
+
+    val tokens = boxes.filter(_.getTokens.size() > 0).map(_.getTokens.get(0).getId).distinct
+    for(token <- tokens){
+      val tokenIncomes = boxes.filter(_.getTokens.size() > 0).filter(_.getTokens.get(0).getId == token)
+      if(tokenIncomes.size >= Configs.incomeMerge.min) result = result :+ tokenIncomes
     }
     result
   }
