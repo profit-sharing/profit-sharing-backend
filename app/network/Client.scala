@@ -19,7 +19,6 @@ class Client @Inject()() {
    * @return current height of blockchain
    */
   def setClient(): Long = {
-    print("salam")
     try {
       client = RestApiErgoClient.create(Configs.nodeUrl, Configs.networkType, "", Configs.explorerUrl)
       client.execute(ctx => {
