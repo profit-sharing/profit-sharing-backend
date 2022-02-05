@@ -185,6 +185,12 @@ object Scripts {
   // Tokens 0: configNFT, 1: DistributionTokens, 2: LockingTokens
   lazy val configScript: String =
   s"""{
+     |  val lockingToken = fromBase64("LOCKING_TOKEN")
+     |  val distributionToken = fromBase64("DISTRIBUTION_TOKEN")
+     |  val stakingToken = fromBase64("STAKING_TOKEN")
+     |  val distributionHash = fromBase64("DISTRIBUTION_HASH")
+     |  val ticketHash = fromBase64("TICKET_HASH")
+     |
      |  val checkpoint = SELF.R4[Coll[Long]].get(0)
      |  val minErgShare = SELF.R4[Coll[Long]].get(1)
      |  val minTokenShare = SELF.R4[Coll[Long]].get(2)

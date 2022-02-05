@@ -5,11 +5,11 @@ import helpers.{Configs, Utils}
 import org.scalatest.propspec._
 import network.Client
 import org.ergoplatform.appkit.impl.ErgoTreeContract
-import org.ergoplatform.appkit.{BlockchainContext, ErgoToken, InputBox}
+import org.ergoplatform.appkit.{BlockchainContext, CoveringBoxes, ErgoToken, InputBox}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.matchers.should
-
+import collection.JavaConverters._
 import scala.collection.immutable._
 
 class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
@@ -53,6 +53,16 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     }})
     boxList
   })
+  when(mockedClient.getCoveringBoxesFor(Configs.initializer.address, Configs.fee*8)).thenReturn({
+    client.getClient.execute(ctx =>{
+      val txB = ctx.newTxBuilder()
+      val box = txB.outBoxBuilder()
+        .value(1e9.toLong)
+        .contract(new ErgoTreeContract(Configs.initializer.address.getErgoAddress.script))
+        .build().convertToInputWith(randomId(), 1)
+      new CoveringBoxes(Configs.fee * 8, List(box).asJava)
+    })
+  })
 
   val mockedCtx: BlockchainContext = mock(classOf[BlockchainContext])
   when(mockedCtx.newTxBuilder()).thenAnswer(_ => {
@@ -63,20 +73,18 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   })
   when(mockedCtx.sendTransaction(any())).thenReturn(randomId())
 
-  val mockedBoxes: Boxes = mock(classOf[Boxes])
-
   def createBoxObject: Boxes = new Boxes(mockedClient, utils, contracts)
-  def createProcedureObject: Procedures = new Procedures(mockedClient, mockedBoxes, contracts, utils)
+  def createProcedureObject: Procedures = new Procedures(mockedClient, createBoxObject, contracts, utils)
 
   def randomId(): String ={
     val randomBytes = Array.fill(32)((scala.util.Random.nextInt(256) - 128).toByte)
     randomBytes.map("%02x" format _).mkString
   }
 
-  /*
-  * Testing the getIncomes function
-  * It should return the aggregated list of boxes that are ready to be merged
-  * The Inputs are mocked with unreal boxes
+  /**
+   * Testing the getIncomes
+   * It should return the aggregated list of boxes that are ready to be merged
+   * The output must have two lists one for Erg and one for the required token type
    */
   property("Testing income box merging") {
     val boxes = createBoxObject
@@ -87,10 +95,10 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     result(1).head.getTokens.get(0).getId.toString should be (tokenId2)
   }
 
-  /*
-  * Testing the tokenIssueTx function
-  * It should return a transaction that issued a new token with specified details
-  * The Input is mocked with unreal box
+  /**
+   * Testing the tokenIssueTx
+   * It should return a transaction that issued a new token with specified details
+   * The output must have a new token type with the specified amount
    */
   property("Testing token issue tx") {
     val procedures = createProcedureObject
@@ -106,10 +114,10 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     tx.getOutputsToSpend.get(2).getValue should be (Configs.fee)
   }
 
-  /*
-  * Testing the mergeIncomesTx function
-  * It should return a transaction that merged the required boxes into one
-  * The Input is mocked with unreal boxes
+  /**
+   * Testing mergeIncomesTx
+   * It should return a transaction that merged the required boxes into one
+   * The merged box must contain all gathered tokens and erg
    */
   property("Testing merge income tx") {
     val procedures = createProcedureObject
@@ -130,4 +138,14 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     tx.getOutputsToSpend.get(1).getValue.toLong should be <= Configs.incomeMerge.maxFee
   }
 
+  /**
+   * Testing serviceInitialization
+   * It should create the service box and return a list of 3 elements denoting the tokens
+   * The service box must have three token types and the correct contract
+   */
+  property("Testing service initialization") {
+    val procedures = createProcedureObject
+    val result = procedures.serviceInitialization(mockedCtx)
+    result should have size 3
+  }
 }
