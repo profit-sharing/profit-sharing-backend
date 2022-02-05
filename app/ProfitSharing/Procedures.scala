@@ -143,21 +143,20 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
     signedTx
   }
 
-  def mergeIncomes(): Unit = try{
-    client.getClient.execute(ctx => {
-      logger.debug(s"income address is ${contracts.incomeAddress}")
-      val incomes = boxes.getIncomes
-      if(incomes.nonEmpty)
-        for(incomeSet <- incomes) {
-          val signedTx = mergeIncomesTx(incomeSet, ctx)
-          var txId = ctx.sendTransaction(signedTx)
-          if (txId == null) logger.error(s"Merge transaction sending failed")
-          else {
-            txId = txId.replaceAll("\"", "")
-            logger.info(s"Merge Transaction Sent with TxId: " + txId)
-          }
+  def mergeIncomes(ctx: BlockchainContext): Unit = try{
+    logger.debug(s"income address is ${contracts.incomeAddress}")
+    val incomes = boxes.getIncomes
+    logger.debug(s"income list size is ${incomes.size}")
+    if(incomes.nonEmpty)
+      for(incomeSet <- incomes) {
+        val signedTx = mergeIncomesTx(incomeSet, ctx)
+        var txId = ctx.sendTransaction(signedTx)
+        if (txId == null) logger.error(s"Merge transaction sending failed")
+        else {
+          txId = txId.replaceAll("\"", "")
+          logger.info(s"Merge Transaction Sent with TxId: " + txId)
         }
-    })
+      }
   } catch {
     case e: Throwable => logger.error(utils.getStackTraceStr(e))
   }

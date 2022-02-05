@@ -19,7 +19,7 @@ class StartupService @Inject()(node: Client, system: ActorSystem, procedures: Pr
   logger.info("App started!")
   node.setClient()
 
-  val jobs: ActorRef = system.actorOf(Props(new Jobs(procedures)), "scheduler")
+  val jobs: ActorRef = system.actorOf(Props(new Jobs(procedures, node)), "scheduler")
 
   system.scheduler.scheduleAtFixedRate(
     initialDelay = 2.seconds,

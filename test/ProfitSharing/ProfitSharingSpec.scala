@@ -5,10 +5,11 @@ import helpers.{Configs, Utils}
 import org.scalatest.propspec._
 import network.Client
 import org.ergoplatform.appkit.impl.ErgoTreeContract
-import org.ergoplatform.appkit.{BlockchainContext, CoveringBoxes, ErgoToken, InputBox}
+import org.ergoplatform.appkit.{BlockchainContext, CoveringBoxes, ErgoToken, InputBox, SignedTransaction}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.matchers.should
+
 import collection.JavaConverters._
 import scala.collection.immutable._
 
@@ -72,6 +73,8 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     client.getClient.execute(_.newProverBuilder())
   })
   when(mockedCtx.sendTransaction(any())).thenReturn(randomId())
+
+//  val fakeTx: SignedTransaction = createProcedureObject.tokenIssueTx(mockedCtx, 10, mockedClient.getCoveringBoxesFor(Configs.initializer.address, Configs.fee*8), Configs.initializer.address, "test token", "test token")
 
   def createBoxObject: Boxes = new Boxes(mockedClient, utils, contracts)
   def createProcedureObject: Procedures = new Procedures(mockedClient, createBoxObject, contracts, utils)
@@ -147,5 +150,21 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     val procedures = createProcedureObject
     val result = procedures.serviceInitialization(mockedCtx)
     result should have size 3
+  }
+
+  /**
+   * Testing mergeIncome
+   * It should call mergeIncomeTx for each set of income boxes
+   */
+  property("Testing merge income service") {
+    val boxes: Boxes = createBoxObject
+    val spyBoxes: Boxes = spy(boxes)
+    doReturn(List(List(), List()), List(List(), List())).when(spyBoxes).getIncomes
+    val procedures = new Procedures(mockedClient, spyBoxes, contracts, utils)
+    val spyProcedures = spy(procedures)
+    doReturn(null, null).when(spyProcedures).mergeIncomesTx(List(), mockedCtx)
+    spyProcedures.mergeIncomes(mockedCtx)
+    verify(spyBoxes, times(1)).getIncomes
+    verify(spyProcedures, times(2)).mergeIncomesTx(any(), any())
   }
 }
