@@ -1,13 +1,14 @@
 package ProfitSharing
 
 import helpers.{Configs, Utils}
-import network.Client
-import org.ergoplatform.appkit.{ErgoToken, InputBox, OutBox, UnsignedTransactionBuilder}
+import network.{Client, Explorer}
+import org.ergoplatform.appkit.{BlockchainContext, ErgoToken, InputBox, OutBox, UnsignedTransactionBuilder}
+import play.api.libs.json._
 
 import javax.inject.{Inject, Singleton}
 
 @Singleton
-class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts) {
+class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explorer: Explorer) {
 
   /**
    * @return Some list of income boxes ready to merge
@@ -39,5 +40,14 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts) {
         new ErgoToken(lockingToken, Configs.initializer.lockingCount))
       .registers(utils.longListToErgoValue(Array(1, 1e9.toLong, 10, 0, 0, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
       .build()
+  }
+
+  /**
+   * @return last config box in the network (considering the mempool)
+   */
+  def findConfig(ctx: BlockchainContext): InputBox ={
+    val configJson = (explorer.getUnspentTokenBoxes(Configs.token.configNFT, 0, 10) \ "items").as[List[JsValue]].head
+    val configBox = ctx.getBoxesById((configJson \ "boxId").as[String]).head
+    utils.findLastMempoolBoxFor(contracts.configAddress.toString, configBox, ctx)
   }
 }

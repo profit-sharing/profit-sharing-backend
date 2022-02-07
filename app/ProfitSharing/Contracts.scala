@@ -14,6 +14,7 @@ class Contracts @Inject()(client: Client, utils: Utils){
   lazy val ticket: ErgoContract = generateTicketContract()
   lazy val config: ErgoContract = generateConfigContract()
   lazy val incomeAddress: Address = utils.generateAddress(income)
+  lazy val configAddress: Address = utils.generateAddress(config)
 
 
   private def generateIncomeContract(): ErgoContract ={

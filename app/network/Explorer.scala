@@ -1,13 +1,10 @@
 package network
 
-import helpers.{Configs, connectionException, requestException, parseException}
-import io.circe.Json
-
+import helpers.{Configs, connectionException, requestException}
+import play.api.libs.json._
 import javax.inject.Singleton
-import org.ergoplatform.appkit.{Address, ErgoTreeTemplate}
 import play.api.Logger
 
-import sigmastate.Values.ErgoTree
 
 @Singleton
 class Explorer() {
@@ -26,8 +23,8 @@ class Explorer() {
    * @param address address to search in mempool
    * @return mempool transactions belonging to the address
    */
-  def getTxsInMempoolByAddress(address: String): Json = try {
-    Request.httpGet(s"$mempoolTransactions/$address")
+  def getTxsInMempoolByAddress(address: String): JsValue = try {
+    Json.parse(Request.httpGet(s"$mempoolTransactions/$address").toString())
   } catch {
     case e: requestException =>
       logger.warn(e.getMessage)
@@ -41,22 +38,22 @@ class Explorer() {
    * @param txId transaction id
    * @return transaction if it is unconfirmed
    */
-  def getUnconfirmedTx(txId: String): Json = try {
-    Request.httpGet(s"$unconfirmedTx/$txId")
+  def getUnconfirmedTx(txId: String): JsValue = try {
+    Json.parse(Request.httpGet(s"$unconfirmedTx/$txId").toString())
   } catch {
     case _: Throwable =>
-      Json.Null
+      JsNull
   }
 
   /**
    * @param txId transaction id
    * @return transaction if it is confirmed (mined)
    */
-  def getConfirmedTx(txId: String): Json = try {
-    Request.httpGet(s"$tx/$txId")
+  def getConfirmedTx(txId: String): JsValue = try {
+    Json.parse(Request.httpGet(s"$tx/$txId").toString())
   } catch {
     case _: Throwable =>
-      Json.Null
+      JsNull
   }
 
   /**
@@ -65,18 +62,14 @@ class Explorer() {
    */
   def getConfNum(txId: String): Int = try {
     val unc = getUnconfirmedTx(txId)
-    if (unc != Json.Null) 0
+    if (unc != JsNull) 0
     else {
       val conf = getConfirmedTx(txId)
-      if (conf != Json.Null) conf.hcursor.downField("summary").as[Json].getOrElse(throw parseException())
-        .hcursor.downField("confirmationsCount").as[Int].getOrElse(-1)
+      if (conf != JsNull) ((conf \ "summary").as[JsValue] \ "confirmationsCount").as[Int]
       else -1
     }
   } catch {
     case e: connectionException => throw e
-    case e: parseException =>
-      logger.error(e.getMessage)
-      throw connectionException()
     case e: Throwable =>
       logger.error(e.getMessage)
       throw connectionException()
@@ -86,8 +79,8 @@ class Explorer() {
    * @param tokenId token id to search for
    * @return list of unspent boxes containing the token
    */
-  def getUnspentTokenBoxes(tokenId: String, offset: Int, limit: Int): Json = try {
-    Request.httpGet(s"$unspentBoxesByTokenId/$tokenId?offset=$offset&limit=$limit")
+  def getUnspentTokenBoxes(tokenId: String, offset: Int, limit: Int): JsValue = try {
+    Json.parse(Request.httpGet(s"$unspentBoxesByTokenId/$tokenId?offset=$offset&limit=$limit").toString())
   } catch {
     case e: requestException =>
       logger.warn(e.getMessage)
@@ -101,8 +94,8 @@ class Explorer() {
    * @param tokenId token id to search for
    * @return list of all boxes(spent and unspent) containing the token
    */
-  def getAllTokenBoxes(tokenId: String, offset: Int, limit: Int): Json = try {
-    Request.httpGet(s"$allBoxesByTokenId/$tokenId?offset=$offset&limit=$limit")
+  def getAllTokenBoxes(tokenId: String, offset: Int, limit: Int): JsValue = try {
+    Json.parse(Request.httpGet(s"$allBoxesByTokenId/$tokenId?offset=$offset&limit=$limit").toString())
   } catch {
     case e: requestException =>
       logger.warn(e.getMessage)
@@ -116,8 +109,8 @@ class Explorer() {
    * @param boxId required box id
    * @return a box with that id in the network
    */
-  def getUnspentBoxByID(boxId: String): Json = try {
-    Request.httpGet(s"$boxesP1/$boxId")
+  def getUnspentBoxByID(boxId: String): JsValue = try {
+    Json.parse(Request.httpGet(s"$boxesP1/$boxId").toString())
   } catch {
     case e: requestException =>
       logger.warn(e.getMessage)
@@ -131,8 +124,8 @@ class Explorer() {
    * @param address address to search for
    * @return list of unconfirmed transactions belonging to the address
    */
-  def getUnconfirmedTxByAddress(address: String): Json = try {
-    Request.httpGet(s"$unconfirmedTx/byAddress/$address/?offset=0&limit=100")
+  def getUnconfirmedTxByAddress(address: String): JsValue = try {
+    Json.parse(Request.httpGet(s"$unconfirmedTx/byAddress/$address/?offset=0&limit=100").toString())
   } catch {
     case e: requestException =>
       logger.warn(e.getMessage)
