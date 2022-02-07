@@ -2,7 +2,9 @@ package ProfitSharing
 
 import helpers.{Configs, Utils}
 import network.{Client, Explorer}
-import org.ergoplatform.appkit.{BlockchainContext, ErgoToken, InputBox, OutBox, UnsignedTransactionBuilder}
+import org.ergoplatform.ErgoAddress
+import org.ergoplatform.appkit.impl.ErgoTreeContract
+import org.ergoplatform.appkit.{BlockchainContext, ErgoId, ErgoToken, ErgoValue, InputBox, OutBox, UnsignedTransactionBuilder}
 import play.api.libs.json._
 
 import javax.inject.{Inject, Singleton}
@@ -49,5 +51,31 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
     val configJson = (explorer.getUnspentTokenBoxes(Configs.token.configNFT, 0, 10) \ "items").as[List[JsValue]].head
     val configBox = ctx.getBoxesById((configJson \ "boxId").as[String]).head
     utils.findLastMempoolBoxFor(contracts.configAddress.toString, configBox, ctx)
+  }
+
+  /**
+   *
+   * @return The new config box created with new setting
+   */
+  def getConfig(txB: UnsignedTransactionBuilder, value: Long, distCount: Long, lockingCount: Long, r4: Array[Long]): OutBox ={
+    txB.outBoxBuilder()
+      .value(value)
+      .contract(contracts.config)
+      .tokens(new ErgoToken(Configs.token.configNFT, 1),
+        new ErgoToken(Configs.token.distribution, distCount),
+        new ErgoToken(Configs.token.locking, lockingCount))
+      .registers(utils.longListToErgoValue(r4))
+      .build()
+  }
+
+  def getTicket(txB: UnsignedTransactionBuilder, value: Long, stake: Long, address: ErgoAddress,  r4: Array[Long] ,reservedTokenId: ErgoId): OutBox ={
+    txB.outBoxBuilder()
+      .value(value)
+      .contract(contracts.ticket)
+      .tokens(new ErgoToken(Configs.token.locking, 1), new ErgoToken(Configs.token.staking, stake))
+      .registers(utils.longListToErgoValue(r4),
+        ErgoValue.of(new ErgoTreeContract(address.script).getErgoTree.bytes),
+        ErgoValue.of(reservedTokenId.getBytes))
+      .build()
   }
 }
