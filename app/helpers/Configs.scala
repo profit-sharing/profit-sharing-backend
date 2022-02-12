@@ -23,6 +23,7 @@ object Configs extends ConfigHelper {
     lazy val secret: BigInteger = BigInt(readKey("initializer.secret"), 16).bigInteger
     lazy val distributionCount: Long = readKey("initializer.distributionCount").toLong
     lazy val lockingCount: Long = readKey("initializer.lockingCount").toLong
+    lazy val stakingCount: Long = readKey("initializer.stakingCount").toLong
   }
 
   object incomeMerge{
@@ -34,9 +35,18 @@ object Configs extends ConfigHelper {
   }
 
   object token{
-    lazy val locking: String = readKey("token.locking")
-    lazy val staking: String = readKey("token.staking")
-    lazy val distribution: String = readKey("token.distribution")
-    lazy val configNFT: String = readKey("token.configNFT")
+    var locking: String = readKey("token.locking")
+    var staking: String = readKey("token.staking")
+    var distribution: String = readKey("token.distribution")
+    var configNFT: String = readKey("token.configNFT")
+  }
+
+  object owner{
+    lazy val address: Address =  Address.create(readKey("owner.address"))
+    lazy val secret: BigInteger = BigInt(readKey("owner.secret"), 16).bigInteger
+  }
+  object user{
+    lazy val address: Address =  Address.create(readKey("user.address"))
+    lazy val secret: BigInteger = BigInt(readKey("user.secret"), 16).bigInteger
   }
 }

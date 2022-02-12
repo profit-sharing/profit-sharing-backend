@@ -33,13 +33,13 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
   /**
    * @return initial config box
    */
-  def createConfig(txB: UnsignedTransactionBuilder, configNFT: String, distributionToken: String, lockingToken: String): OutBox ={
+  def createConfig(txB: UnsignedTransactionBuilder): OutBox ={
     txB.outBoxBuilder()
       .value(Configs.fee*2)
       .contract(contracts.config)
-      .tokens(new ErgoToken(configNFT, 1),
-        new ErgoToken(distributionToken, Configs.initializer.distributionCount),
-        new ErgoToken(lockingToken, Configs.initializer.lockingCount))
+      .tokens(new ErgoToken(Configs.token.configNFT, 1),
+        new ErgoToken(Configs.token.distribution, Configs.initializer.distributionCount),
+        new ErgoToken(Configs.token.locking, Configs.initializer.lockingCount))
       .registers(utils.longListToErgoValue(Array(1, 1e9.toLong, 10, 0, 0, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
       .build()
   }
@@ -54,7 +54,6 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
   }
 
   /**
-   *
    * @return The new config box created with new setting
    */
   def getConfig(txB: UnsignedTransactionBuilder, value: Long, distCount: Long, lockingCount: Long, r4: Array[Long]): OutBox ={
@@ -68,6 +67,9 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
       .build()
   }
 
+  /**
+   * @return The newly created ticket with locking staking tokens
+   */
   def getTicket(txB: UnsignedTransactionBuilder, value: Long, stake: Long, address: ErgoAddress,  r4: Array[Long] ,reservedTokenId: ErgoId): OutBox ={
     txB.outBoxBuilder()
       .value(value)
