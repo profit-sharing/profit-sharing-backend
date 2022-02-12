@@ -29,7 +29,7 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
   }
 
   /**
-   * @return service initialization
+   * @return service initialization information
    * You need to update the service config after this initialization
    */
   def serviceInitialization(): Action[AnyContent] = Action {
@@ -50,6 +50,20 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
         ("lockingToken", Json.fromString(response(2))),
         ("stakingToken", Json.fromString(response(3)))
       ))
+    Ok(result.toString()).as("application/json")
+  }
+
+  /**
+   * Locking user staking tokens
+   * Needs to be changed (or removed) after using wallet connectors
+   */
+  def lock(): Action[AnyContent] = Action {
+    client.getClient.execute(ctx => {
+      procedures.locking(ctx)
+    })
+    val result = Json.fromFields(List(
+      ("status", Json.fromString("ok")),
+    ))
     Ok(result.toString()).as("application/json")
   }
 

@@ -24,6 +24,9 @@ object Configs extends ConfigHelper {
     lazy val distributionCount: Long = readKey("initializer.distributionCount").toLong
     lazy val lockingCount: Long = readKey("initializer.lockingCount").toLong
     lazy val stakingCount: Long = readKey("initializer.stakingCount").toLong
+    lazy val minTokenShare: Long = readKey("initializer.minTokenShare").toLong
+    lazy val minErgShare: Long = readKey("initializer.minErgShare").toLong
+    lazy val minTicketValue: Long = readKey("initializer.minTicketValue").toLong
   }
 
   object incomeMerge{

@@ -40,7 +40,7 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
       .tokens(new ErgoToken(Configs.token.configNFT, 1),
         new ErgoToken(Configs.token.distribution, Configs.initializer.distributionCount),
         new ErgoToken(Configs.token.locking, Configs.initializer.lockingCount))
-      .registers(utils.longListToErgoValue(Array(1, 1e9.toLong, 10, 0, 0, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
+      .registers(utils.longListToErgoValue(Array(1, Configs.initializer.minErgShare, Configs.initializer.minTokenShare, 0, 0, Configs.fee, Configs.initializer.minTicketValue, Configs.minBoxErg)))
       .build()
   }
 

@@ -122,6 +122,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
       .build()
 
     val prover = ctx.newProverBuilder()
+      .withDLogSecret(Configs.user.secret)
       .build()
     var signedTx: SignedTransaction = null
     try {

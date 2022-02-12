@@ -105,7 +105,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
 
   def locking(ctx: BlockchainContext): Unit = try{
     val userBox = client.getAllUnspentBox(Configs.user.address).filter(_.getTokens.size() > 0)
-      .filter(_.getTokens.get(0).getId.toString == Configs.token.staking).head
+      .filter(_.getTokens.get(0).getId.toString == Configs.token.staking).filter(_.getValue >= Configs.initializer.minTicketValue + Configs.fee*2).head
     transactions.lockingTx(userBox, Configs.user.address, boxes.findConfig(ctx), ctx)
   } catch {
     case _: internalException => logger.warn("Something went wrong on locking")
