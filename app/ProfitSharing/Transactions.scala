@@ -133,7 +133,6 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
         logger.error(s"Locking tx proving failed")
         throw proveException()
     }
-    logger.info("Staking tokens locked successfully")
     signedTx
   }
 }

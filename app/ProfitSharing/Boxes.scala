@@ -1,16 +1,19 @@
 package ProfitSharing
 
-import helpers.{Configs, Utils}
+import helpers.{Configs, Utils, connectionException, internalException}
 import network.{Client, Explorer}
 import org.ergoplatform.ErgoAddress
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import org.ergoplatform.appkit.{BlockchainContext, ErgoId, ErgoToken, ErgoValue, InputBox, OutBox, UnsignedTransactionBuilder}
+import play.api.Logger
 import play.api.libs.json._
 
+import scala.collection.JavaConverters._
 import javax.inject.{Inject, Singleton}
 
 @Singleton
 class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explorer: Explorer) {
+  private val logger: Logger = Logger(this.getClass)
 
   /**
    * @return Some list of income boxes ready to merge
@@ -45,12 +48,44 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
   }
 
   /**
+   * Finds the last version of a self-replicating box in the network
+   * @param address The required box address
+   * @param box first unspent box
+   * @return The last box related to this self-replicating box considering the mempool
+   */
+  def findLastMempoolBoxFor(address: String, box: InputBox, ctx: BlockchainContext): InputBox = try {
+    val mempool = explorer.getUnconfirmedTxByAddress(address)
+    var outBox = box
+    val txs = (mempool \ "items").as[List[JsValue]]
+    var txMap: Map[String, JsValue] = Map()
+    txs.foreach(txJson => {
+      val id = ((txJson \ "inputs").as[List[JsValue]].head \ "id").as[String]
+      txMap += (id -> txJson)
+    })
+    val keys = txMap.keys.toSeq
+    while (keys.contains(outBox.getId.toString)) {
+      val txJson = txMap(outBox.getId.toString)
+      val tmpTx = utils.JsonToTransaction(txJson, ctx)
+      outBox = tmpTx.getOutputsToSpend.asScala.filter(box => Configs.addressEncoder.fromProposition(box.getErgoTree).toString == address).head
+    }
+    outBox
+  } catch {
+    case e: connectionException => throw e
+    case e: JsResultException =>
+      logger.error(e.getMessage)
+      throw internalException()
+    case e: Throwable =>
+      logger.error(utils.getStackTraceStr(e))
+      throw internalException()
+  }
+
+  /**
    * @return last config box in the network (considering the mempool)
    */
   def findConfig(ctx: BlockchainContext): InputBox ={
     val configJson = (explorer.getUnspentTokenBoxes(Configs.token.configNFT, 0, 10) \ "items").as[List[JsValue]].head
     val configBox = ctx.getBoxesById((configJson \ "boxId").as[String]).head
-    utils.findLastMempoolBoxFor(contracts.configAddress.toString, configBox, ctx)
+    findLastMempoolBoxFor(contracts.configAddress.toString, configBox, ctx)
   }
 
   /**

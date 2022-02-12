@@ -15,13 +15,9 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
   def serviceInitialization(ctx: BlockchainContext): List[String] = try{
     val initialBox = client.getCoveringBoxesFor(Configs.initializer.address, Configs.fee * 8).getBoxes.asScala.filter(_.getTokens.size() == 0)
     val configNFTTx: SignedTransaction = transactions.tokenIssueTx(ctx, 1, initialBox, Configs.initializer.address, "ErgoProfitSharing, ConfigNFT", "ErgoProfitSharing, ConfigNFT")
-    Thread.sleep(1000*60*5)
     val distTokenTx = transactions.tokenIssueTx(ctx, Configs.initializer.distributionCount, Seq(configNFTTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, DistributionToken", "ErgoProfitSharing, DistributionToken")
-    Thread.sleep(1000*60*5)
     val lockingTokenTx = transactions.tokenIssueTx(ctx, Configs.initializer.lockingCount, Seq(distTokenTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, LockingToken", "ErgoProfitSharing, LockingToken")
-    Thread.sleep(1000*60*5)
     val stakingTokenTx = transactions.tokenIssueTx(ctx, Configs.fee, Seq(lockingTokenTx.getOutputsToSpend.get(0)), Configs.owner.address, "ErgoProfitSharing, StakingToken", "ErgoProfitSharing, StakingToken")
-    Thread.sleep(1000*60*5)
 
     val configNFT = configNFTTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
     val distributionToken = distTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
@@ -106,7 +102,13 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
   def locking(ctx: BlockchainContext): Unit = try{
     val userBox = client.getAllUnspentBox(Configs.user.address).filter(_.getTokens.size() > 0)
       .filter(_.getTokens.get(0).getId.toString == Configs.token.staking).filter(_.getValue >= Configs.initializer.minTicketValue + Configs.fee*2).head
-    transactions.lockingTx(userBox, Configs.user.address, boxes.findConfig(ctx), ctx)
+    val signedTx = transactions.lockingTx(userBox, Configs.user.address, boxes.findConfig(ctx), ctx)
+    var txId = ctx.sendTransaction(signedTx)
+    if (txId == null) logger.error(s"Lock transaction sending failed")
+    else {
+      txId = txId.replaceAll("\"", "")
+      logger.info(s"Lock Transaction Completed successfully with TxId: " + txId)
+    }
   } catch {
     case _: internalException => logger.warn("Something went wrong on locking")
     case e: Throwable => logger.error(utils.getStackTraceStr(e))

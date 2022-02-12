@@ -1,10 +1,11 @@
 package ProfitSharing
 import helpers.Configs
-import network.Client
+import network.{Client, Explorer}
 import org.ergoplatform.appkit.{BlockchainContext, CoveringBoxes, ErgoToken, InputBox}
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
+import play.api.libs.json.{JsArray, JsNumber, JsObject}
 
 import scala.collection.immutable.List
 import collection.JavaConverters._
@@ -12,11 +13,13 @@ import collection.JavaConverters._
 class MockedEnv (client: Client, contracts: Contracts) {
   private val mockedClient = mock(classOf[Client])
   private val mockedCtx: BlockchainContext = mock(classOf[BlockchainContext])
+  private val mockedExplorer: Explorer = mock(classOf[Explorer])
   val tokenId1 = "00ee077854471a04fbef18a5a971b50fb39f52fc6f6b3b8d0682ce2c48f6ebef"
   val tokenId2 = "11ee077854471a04fbef18a5a971b50fb39f52fc6f6b3b8d0682ce2c48f6ebef"
 
   def getMockedClient: Client = mockedClient
   def getMockedCtx: BlockchainContext = mockedCtx
+  def getMockedExplorer: Explorer = mockedExplorer
 
   def randomId(): String ={
     val randomBytes = Array.fill(32)((scala.util.Random.nextInt(256) - 128).toByte)
@@ -73,4 +76,13 @@ class MockedEnv (client: Client, contracts: Contracts) {
     client.getClient.execute(_.newProverBuilder())
   })
   when(mockedCtx.sendTransaction(any())).thenReturn(randomId())
+
+  when(mockedExplorer.getUnconfirmedTxByAddress(contracts.configAddress.toString)).thenReturn(
+    JsObject(
+      Seq(
+        "items" -> JsArray(IndexedSeq()),
+        "total" -> JsNumber(0)
+      )
+    )
+  )
 }
