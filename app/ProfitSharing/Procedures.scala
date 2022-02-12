@@ -13,11 +13,15 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
   private val logger: Logger = Logger(this.getClass)
 
   def serviceInitialization(ctx: BlockchainContext): List[String] = try{
-    val initialBox = client.getCoveringBoxesFor(Configs.initializer.address, Configs.fee * 8).getBoxes.asScala
+    val initialBox = client.getCoveringBoxesFor(Configs.initializer.address, Configs.fee * 8).getBoxes.asScala.filter(_.getTokens.size() == 0)
     val configNFTTx: SignedTransaction = transactions.tokenIssueTx(ctx, 1, initialBox, Configs.initializer.address, "ErgoProfitSharing, ConfigNFT", "ErgoProfitSharing, ConfigNFT")
+    Thread.sleep(1000*60*5)
     val distTokenTx = transactions.tokenIssueTx(ctx, Configs.initializer.distributionCount, Seq(configNFTTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, DistributionToken", "ErgoProfitSharing, DistributionToken")
+    Thread.sleep(1000*60*5)
     val lockingTokenTx = transactions.tokenIssueTx(ctx, Configs.initializer.lockingCount, Seq(distTokenTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, LockingToken", "ErgoProfitSharing, LockingToken")
+    Thread.sleep(1000*60*5)
     val stakingTokenTx = transactions.tokenIssueTx(ctx, Configs.fee, Seq(lockingTokenTx.getOutputsToSpend.get(0)), Configs.owner.address, "ErgoProfitSharing, StakingToken", "ErgoProfitSharing, StakingToken")
+    Thread.sleep(1000*60*5)
 
     val configNFT = configNFTTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
     val distributionToken = distTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
@@ -60,8 +64,8 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       List()
     }
     else {
-      logger.info(s" config box created successfully")
-      List(configNFT, distributionToken, lockingToken)
+      logger.info(s" config box created successfully with txId: $txId")
+      List(configNFT, distributionToken, lockingToken, stakingToken)
     }
   } catch {
     case _: proveException =>

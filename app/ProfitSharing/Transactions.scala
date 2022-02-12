@@ -46,9 +46,9 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
         logger.error(s"token $name issue tx proving failed")
         throw proveException()
     }
-    logger.info(s" token $name issued successfully")
     val txId = ctx.sendTransaction(signedTx)
     if (txId == null) logger.error(s"Token Issue transaction sending failed")
+    else logger.info(s"Token $name issued successfully with txId: $txId")
     signedTx
   }
 

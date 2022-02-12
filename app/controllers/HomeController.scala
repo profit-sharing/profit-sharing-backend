@@ -47,7 +47,8 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
         ("status", Json.fromString("Ok")),
         ("configNFT", Json.fromString(response.head)),
         ("distributionToken", Json.fromString(response(1))),
-        ("lockingToken", Json.fromString(response(2)))
+        ("lockingToken", Json.fromString(response(2))),
+        ("stakingToken", Json.fromString(response(3)))
       ))
     Ok(result.toString()).as("application/json")
   }
