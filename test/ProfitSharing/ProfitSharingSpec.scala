@@ -5,12 +5,13 @@ import helpers.{Configs, Utils}
 import org.scalatest.propspec._
 import network.{Client, Explorer}
 import org.ergoplatform.appkit.impl.ErgoTreeContract
-import org.ergoplatform.appkit.{ErgoToken, InputBox}
+import org.ergoplatform.appkit.{ErgoToken, InputBox, SignedTransaction}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.matchers.should
 
 import scala.collection.immutable._
+import scala.collection.JavaConverters._
 
 class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   val client = new Client()
@@ -175,6 +176,42 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   }
 
   /**
+   * Target: testing distributionCreationTx
+   * Dependencies:
+   *    Ctx
+   * Procedure:
+   *    1- mocking environment
+   *    2- mocking inputBoxes
+   *    2- Calling distributionCreationTx function
+   * Expected Output:
+   *    The function should return a transaction created the distribution box from income
+   *    transaction must have 3 outputs, config box, distribution and fee
+   */
+  property("Testing distribution creation tx over incomes") {
+    val mockedEnv = new MockedEnv(client, contracts)
+    val transactions = getMockedTransaction(mockedEnv)
+    val mockedIncomeBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
+      .value(1e9.toLong + 2*Configs.fee)
+      .contract(contracts.income)
+      .build().convertToInputWith(mockedEnv.randomId(), 1)
+    val mockedConfigBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
+      .value(1e9.toLong)
+      .contract(contracts.config)
+      .tokens(new ErgoToken(Configs.token.configNFT, 1),
+        new ErgoToken(Configs.token.distribution, 100),
+        new ErgoToken(Configs.token.locking, 20))
+      .registers(utils.longListToErgoValue(Array(1, (0.1*1e9).toLong, 10, 1, 10, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
+      .build().convertToInputWith(mockedEnv.randomId(), 1)
+    val tx = transactions.distributionCreationTx(mockedEnv.getMockedCtx, mockedIncomeBox, mockedConfigBox)
+
+    tx.getOutputsToSpend.size() should be (3)
+    tx.getOutputsToSpend.get(0).getTokens.get(1).getValue should be (99)
+    tx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString should be (Configs.token.distribution)
+    tx.getOutputsToSpend.get(1).getValue should be (1e9.toLong + Configs.fee)
+    tx.getOutputsToSpend.get(2).getValue should be (Configs.fee)
+  }
+
+  /**
    * Target: testing serviceInitialization
    * Dependencies:
    *    Ctx
@@ -220,5 +257,41 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     procedures.mergeIncomes(mockedEnv.getMockedCtx)
     verify(mockedBoxes, times(1)).getIncomes
     verify(mockedTransactions, times(2)).mergeIncomesTx(any(), any())
+  }
+
+  /**
+   * Target: testing distribution creation
+   * Dependencies:
+   *    Client & CTX
+   *    Boxes
+   *    Transactions
+   * Procedure:
+   *    1- mocking environment
+   *    2- mocking signedTransaction (output of the distributionCreationTx)
+   *    3- mocking transactions object (distributionCreationTx)
+   *    4- Calling distributionCreation function
+   * Expected Output:
+   *    The function should create distributions for incomes hitting the threshold
+   *    The function should call distributionCreationTx twice, one for erg and the other for token distribution
+   */
+  property("Testing distribution creation service") {
+    val mockedEnv = new MockedEnv(client, contracts)
+    val mockedBoxes: Boxes = mock(classOf[Boxes])
+    val mockedConfigBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
+      .value(1e9.toLong)
+      .contract(contracts.config)
+      .tokens(new ErgoToken(Configs.token.configNFT, 1),
+        new ErgoToken(Configs.token.distribution, 100),
+        new ErgoToken(Configs.token.locking, 20))
+      .registers(utils.longListToErgoValue(Array(1, (0.1*1e9).toLong, 1, 1, 9, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
+      .build().convertToInputWith(mockedEnv.randomId(), 1)
+    doReturn(mockedConfigBox, mockedConfigBox).when(mockedBoxes).findConfig(mockedEnv.getMockedCtx)
+    val mockedSignedTx: SignedTransaction = mock(classOf[SignedTransaction])
+    when(mockedSignedTx.getOutputsToSpend).thenReturn(Seq(mockedConfigBox).asJava)
+    val mockedTransactions: Transactions = mock(classOf[Transactions])
+    when(mockedTransactions.distributionCreationTx(any(), any(), any())).thenReturn(mockedSignedTx)
+    val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, utils, mockedTransactions)
+    procedures.distributionCreation(mockedEnv.getMockedCtx)
+    verify(mockedTransactions, times(Configs.incomeMerge.max + Configs.incomeMerge.min)).distributionCreationTx(any(), any(), any())
   }
 }

@@ -43,7 +43,7 @@ class MockedEnv (client: Client, contracts: Contracts) {
           txB.outBoxBuilder()
             .value((1e9*0.001).toLong)
             .contract(contracts.income)
-            .tokens(new ErgoToken(tokenId1, 10))
+            .tokens(new ErgoToken(tokenId1, 5))
             .build().convertToInputWith(randomId(), 1)
       }
       for(i <- 1 to Configs.incomeMerge.max) {

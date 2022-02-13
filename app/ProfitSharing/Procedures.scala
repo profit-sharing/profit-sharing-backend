@@ -1,6 +1,6 @@
 package ProfitSharing
 
-import helpers.{Configs, Utils, internalException, proveException}
+import helpers.{Configs, Utils, internalException, notCoveredException, proveException}
 import models.Config
 import network.Client
 import org.ergoplatform.appkit.{BlockchainContext, SignedTransaction}
@@ -120,8 +120,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
     var configBox = boxes.findConfig(ctx)
     val config = Config(configBox)
     client.getAllUnspentBox(contracts.incomeAddress).foreach(income =>{
-      logger.debug(s"income value is ${income.getValue} while the threshold is ${config.minErgShare * config.stakeCount}")
-      if(income.getValue >= config.minErgShare * config.stakeCount ||
+      if(income.getValue >= config.minErgShare * config.stakeCount + 2 * Configs.fee ||
         (income.getTokens.size() > 0 && income.getTokens.get(0).getValue >= config.minTokenShare * config.stakeCount)) {
         logger.info("one income hits the threshold creating the distribution")
         val signedTx = transactions.distributionCreationTx(ctx, income, configBox)
@@ -135,6 +134,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       }
     })
   } catch {
+    case e: notCoveredException => logger.error(e.getMessage)
     case _: proveException => logger.error("Distribution creation failed")
     case _: internalException => logger.warn("Something went wrong on distribution creation")
     case e: Throwable => logger.error(utils.getStackTraceStr(e))
