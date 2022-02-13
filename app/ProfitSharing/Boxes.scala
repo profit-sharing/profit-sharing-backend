@@ -116,6 +116,9 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
       .build()
   }
 
+  /**
+   * @return The new created income with aggregated or remainder income
+   */
   def getIncome(txB: UnsignedTransactionBuilder, value: Long, tokenCount: Long = 0, tokenId: String = ""): OutBox ={
     val box = txB.outBoxBuilder()
       .value(value)
@@ -124,6 +127,9 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
     box.build()
   }
 
+  /**
+   * @return The newly created distribution out of income
+   */
   def getDistribution(txB: UnsignedTransactionBuilder, value: Long, checkpoint: Long, fee: Long, ticketCount: Long,
                       ergShare: Long, tokenShare: Long = 0, tokenCount: Long = 0, tokenId: String = ""): OutBox ={
     var box = txB.outBoxBuilder()

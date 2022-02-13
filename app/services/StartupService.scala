@@ -23,8 +23,15 @@ class StartupService @Inject()(node: Client, system: ActorSystem, procedures: Pr
 
   system.scheduler.scheduleAtFixedRate(
     initialDelay = 2.seconds,
-    interval = Configs.incomeMerge.interval.seconds,
+    interval = Configs.timeInterval.incomeMerge.seconds,
     receiver = jobs,
     message = JobsUtil.merge
+  )
+
+  system.scheduler.scheduleAtFixedRate(
+    initialDelay = 2.seconds,
+    interval = Configs.timeInterval.distribution.seconds,
+    receiver = jobs,
+    message = JobsUtil.distribution
   )
 }

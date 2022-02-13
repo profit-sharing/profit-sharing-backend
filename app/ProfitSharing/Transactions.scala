@@ -173,7 +173,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
         config.minTicketValue, config.minBoxVal))
 
     var tx: UnsignedTransaction = null
-    val txBuilder = txB.boxesToSpend(Seq(config, income).asJava)
+    val txBuilder = txB.boxesToSpend(Seq(configBox, income).asJava)
       .fee(Configs.fee)
       .sendChangeTo(Configs.owner.address.getErgoAddress)
     if (outIncome.getValue > 0) tx = txBuilder.outputs(outConfig, outDistribution, outIncome).build()

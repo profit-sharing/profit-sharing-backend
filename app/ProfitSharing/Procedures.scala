@@ -1,6 +1,7 @@
 package ProfitSharing
 
 import helpers.{Configs, Utils, internalException, proveException}
+import models.Config
 import network.Client
 import org.ergoplatform.appkit.{BlockchainContext, SignedTransaction}
 import play.api.Logger
@@ -110,7 +111,32 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       logger.info(s"Lock Transaction Completed successfully with TxId: " + txId)
     }
   } catch {
+    case _: proveException => logger.error("Locking failed")
     case _: internalException => logger.warn("Something went wrong on locking")
+    case e: Throwable => logger.error(utils.getStackTraceStr(e))
+  }
+
+  def distributionCreation(ctx: BlockchainContext): Unit = try{
+    var configBox = boxes.findConfig(ctx)
+    val config = Config(configBox)
+    client.getAllUnspentBox(contracts.incomeAddress).foreach(income =>{
+      logger.debug(s"income value is ${income.getValue} while the threshold is ${config.minErgShare * config.stakeCount}")
+      if(income.getValue >= config.minErgShare * config.stakeCount ||
+        (income.getTokens.size() > 0 && income.getTokens.get(0).getValue >= config.minTokenShare * config.stakeCount)) {
+        logger.info("one income hits the threshold creating the distribution")
+        val signedTx = transactions.distributionCreationTx(ctx, income, configBox)
+        var txId = ctx.sendTransaction(signedTx)
+        if (txId == null) logger.error(s"Distribution creation tx sending failed")
+        else {
+          txId = txId.replaceAll("\"", "")
+          logger.info(s"Distribution creation tx Completed successfully with txId: " + txId)
+          configBox = signedTx.getOutputsToSpend.get(0)
+        }
+      }
+    })
+  } catch {
+    case _: proveException => logger.error("Distribution creation failed")
+    case _: internalException => logger.warn("Something went wrong on distribution creation")
     case e: Throwable => logger.error(utils.getStackTraceStr(e))
   }
 }

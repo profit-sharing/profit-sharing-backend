@@ -7,6 +7,7 @@ import play.api.Logger
 
 object JobsUtil {
   val merge = "merge"
+  val distribution = "dist"
 }
 
 class Jobs(procedures: Procedures, client: Client)
@@ -18,5 +19,9 @@ class Jobs(procedures: Procedures, client: Client)
       logger.info(s"Merge Income Thread started")
       client.getClient.execute(procedures.mergeIncomes(_))
       logger.info(s"Merge Income Thread finished working")
+    case JobsUtil.distribution =>
+      logger.info(s"Distribution Creation Thread started")
+      client.getClient.execute(procedures.distributionCreation(_))
+      logger.info(s"Distribution Creation Thread finished working")
   }
 }

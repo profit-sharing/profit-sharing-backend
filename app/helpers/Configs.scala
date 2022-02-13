@@ -29,10 +29,14 @@ object Configs extends ConfigHelper {
     lazy val minTicketValue: Long = readKey("initializer.minTicketValue").toLong
   }
 
+  object timeInterval{
+    lazy val incomeMerge: Int = readKey("timeInterval.incomeMerge").toInt
+    lazy val distribution: Int = readKey("timeInterval.distribution").toInt
+  }
+
   object incomeMerge{
     lazy val min: Int = readKey("incomeMerge.minBox").toInt
     lazy val max: Int = readKey("incomeMerge.maxBox").toInt
-    lazy val interval: Int = readKey("incomeMerge.timeInterval").toInt
     lazy val boxSize: Int = readKey("incomeMerge.boxSize").toInt
     lazy val maxFee: Long = feePerByte * max * boxSize
   }
