@@ -18,6 +18,7 @@ final case class connectionException(private val message: String = "Network Erro
 final case class skipException(private val message: String = "skip") extends Throwable(message)
 final case class proveException(private val message: String = "Tx proving failed") extends Throwable(message)
 final case class internalException(private val message: String = "something went wrong") extends Throwable(message)
+final case class notCoveredException(private val message: String = "funds are not enough for the distribution") extends Throwable(message)
 
 
 @Singleton

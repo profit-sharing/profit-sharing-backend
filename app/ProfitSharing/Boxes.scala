@@ -115,4 +115,24 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
         ErgoValue.of(reservedTokenId.getBytes))
       .build()
   }
+
+  def getIncome(txB: UnsignedTransactionBuilder, value: Long, tokenCount: Long = 0, tokenId: String = ""): OutBox ={
+    val box = txB.outBoxBuilder()
+      .value(value)
+      .contract(contracts.income)
+    if (tokenCount > 0) box.tokens(new ErgoToken(tokenId, tokenCount))
+    box.build()
+  }
+
+  def getDistribution(txB: UnsignedTransactionBuilder, value: Long, checkpoint: Long, fee: Long, ticketCount: Long,
+                      ergShare: Long, tokenShare: Long = 0, tokenCount: Long = 0, tokenId: String = ""): OutBox ={
+    var box = txB.outBoxBuilder()
+      .value(value)
+      .contract(contracts.distribution)
+      .registers(utils.longListToErgoValue(Array(checkpoint, ergShare, tokenShare, fee)), ErgoValue.of(ticketCount))
+    if(tokenCount== 0) box = box.tokens(new ErgoToken(Configs.token.distribution, 1))
+    else box = box.tokens(new ErgoToken(Configs.token.distribution, 1),
+      new ErgoToken(tokenId, tokenCount))
+    box.build()
+  }
 }
