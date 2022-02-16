@@ -32,6 +32,7 @@ object Configs extends ConfigHelper {
   object timeInterval{
     lazy val incomeMerge: Int = readKey("timeInterval.incomeMerge").toInt
     lazy val distribution: Int = readKey("timeInterval.distribution").toInt
+    lazy val payment: Int = readKey("timeInterval.payment").toInt
   }
 
   object incomeMerge{

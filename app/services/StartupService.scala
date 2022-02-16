@@ -34,4 +34,11 @@ class StartupService @Inject()(node: Client, system: ActorSystem, procedures: Pr
     receiver = jobs,
     message = JobsUtil.distribution
   )
+
+  system.scheduler.scheduleAtFixedRate(
+    initialDelay = 2.seconds,
+    interval = Configs.timeInterval.payment.seconds,
+    receiver = jobs,
+    message = JobsUtil.payment
+  )
 }
