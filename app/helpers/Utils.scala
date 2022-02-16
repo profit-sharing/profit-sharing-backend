@@ -21,8 +21,7 @@ final case class internalException(private val message: String = "something went
 final case class notCoveredException(private val message: String = "funds are not enough for the distribution") extends Throwable(message)
 
 
-@Singleton
-class Utils @Inject()() {
+object Utils {
   private val logger: Logger = Logger(this.getClass)
 
   def getStackTraceStr(e: Throwable): String = {

@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 import javax.inject.{Inject, Singleton}
 
 @Singleton
-class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explorer: Explorer) {
+class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
   private val logger: Logger = Logger(this.getClass)
 
   /**
@@ -43,7 +43,7 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
       .tokens(new ErgoToken(Configs.token.configNFT, 1),
         new ErgoToken(Configs.token.distribution, Configs.initializer.distributionCount),
         new ErgoToken(Configs.token.locking, Configs.initializer.lockingCount))
-      .registers(utils.longListToErgoValue(Array(1, Configs.initializer.minErgShare, Configs.initializer.minTokenShare, 0, 0, Configs.fee, Configs.initializer.minTicketValue, Configs.minBoxErg)))
+      .registers(Utils.longListToErgoValue(Array(1, Configs.initializer.minErgShare, Configs.initializer.minTokenShare, 0, 0, Configs.fee, Configs.initializer.minTicketValue, Configs.minBoxErg)))
       .build()
   }
 
@@ -65,7 +65,7 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
     val keys = txMap.keys.toSeq
     while (keys.contains(outBox.getId.toString)) {
       val txJson = txMap(outBox.getId.toString)
-      val tmpTx = utils.JsonToTransaction(txJson, ctx)
+      val tmpTx = Utils.JsonToTransaction(txJson, ctx)
       outBox = tmpTx.getOutputsToSpend.asScala.filter(box => Configs.addressEncoder.fromProposition(box.getErgoTree).toString == address).head
     }
     outBox
@@ -75,7 +75,7 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
       logger.error(e.getMessage)
       throw internalException()
     case e: Throwable =>
-      logger.error(utils.getStackTraceStr(e))
+      logger.error(Utils.getStackTraceStr(e))
       throw internalException()
   }
 
@@ -98,7 +98,7 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
       .tokens(new ErgoToken(Configs.token.configNFT, 1),
         new ErgoToken(Configs.token.distribution, distCount),
         new ErgoToken(Configs.token.locking, lockingCount))
-      .registers(utils.longListToErgoValue(r4))
+      .registers(Utils.longListToErgoValue(r4))
       .build()
   }
 
@@ -110,7 +110,7 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
       .value(value)
       .contract(contracts.ticket)
       .tokens(new ErgoToken(Configs.token.locking, 1), new ErgoToken(Configs.token.staking, stake))
-      .registers(utils.longListToErgoValue(r4),
+      .registers(Utils.longListToErgoValue(r4),
         ErgoValue.of(new ErgoTreeContract(address.script).getErgoTree.bytes),
         ErgoValue.of(reservedTokenId.getBytes))
       .build()
@@ -135,7 +135,7 @@ class Boxes@Inject()(client: Client, utils: Utils, contracts: Contracts, explore
     var box = txB.outBoxBuilder()
       .value(value)
       .contract(contracts.distribution)
-      .registers(utils.longListToErgoValue(Array(checkpoint, ergShare, tokenShare, fee)), ErgoValue.of(ticketCount))
+      .registers(Utils.longListToErgoValue(Array(checkpoint, ergShare, tokenShare, fee)), ErgoValue.of(ticketCount))
     if(tokenCount== 0) box = box.tokens(new ErgoToken(Configs.token.distribution, 1))
     else box = box.tokens(new ErgoToken(Configs.token.distribution, 1),
       new ErgoToken(tokenId, tokenCount))

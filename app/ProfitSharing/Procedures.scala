@@ -10,7 +10,7 @@ import javax.inject.{Inject, Singleton}
 import scala.collection.JavaConverters._
 
 @Singleton
-class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, utils: Utils, transactions: Transactions) {
+class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, transactions: Transactions) {
   private val logger: Logger = Logger(this.getClass)
 
   def serviceInitialization(ctx: BlockchainContext): List[String] = try{
@@ -51,7 +51,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       signedTx = prover.sign(tx)
     } catch {
       case e: Throwable =>
-        logger.error(utils.getStackTraceStr(e))
+        logger.error(Utils.getStackTraceStr(e))
         logger.error(s"config creation tx proving failed")
         throw proveException()
     }
@@ -70,7 +70,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
       List()
     case e: Throwable =>
       logger.error("initialization failed")
-      logger.error(utils.getStackTraceStr(e))
+      logger.error(Utils.getStackTraceStr(e))
       List()
   }
 
@@ -91,13 +91,13 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
         } catch {
           case _: proveException =>
           case e: Throwable =>
-            logger.error(utils.getStackTraceStr(e))
+            logger.error(Utils.getStackTraceStr(e))
             throw internalException()
         }
       }
   } catch {
     case _: internalException => logger.warn("Something went wrong on merging")
-    case e: Throwable => logger.error(utils.getStackTraceStr(e))
+    case e: Throwable => logger.error(Utils.getStackTraceStr(e))
   }
 
   def locking(ctx: BlockchainContext): Unit = try{
@@ -113,7 +113,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
   } catch {
     case _: proveException => logger.error("Locking failed")
     case _: internalException => logger.warn("Something went wrong on locking")
-    case e: Throwable => logger.error(utils.getStackTraceStr(e))
+    case e: Throwable => logger.error(Utils.getStackTraceStr(e))
   }
 
   def distributionCreation(ctx: BlockchainContext): Unit = try{
@@ -137,6 +137,6 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, ut
     case e: notCoveredException => logger.error(e.getMessage)
     case _: proveException => logger.error("Distribution creation failed")
     case _: internalException => logger.warn("Something went wrong on distribution creation")
-    case e: Throwable => logger.error(utils.getStackTraceStr(e))
+    case e: Throwable => logger.error(Utils.getStackTraceStr(e))
   }
 }

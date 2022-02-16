@@ -1,7 +1,7 @@
 package ProfitSharing
 
 import helpers.{Configs, Utils, notCoveredException, proveException}
-import models.Config
+import models.{Config, Distribution, Ticket}
 import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoToken, ErgoValue, InputBox, OutBox, SignedTransaction, UnsignedTransaction}
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import play.api.Logger
@@ -9,7 +9,7 @@ import play.api.Logger
 import scala.collection.JavaConverters._
 import javax.inject.Inject
 
-class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
+class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
   private val logger: Logger = Logger(this.getClass)
 
   def tokenIssueTx(ctx: BlockchainContext, count: Long, inputs: Seq[InputBox], address: Address, name: String, description: String): SignedTransaction ={
@@ -42,7 +42,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
       signedTx = prover.sign(tx)
     } catch {
       case e: Throwable =>
-        logger.error(utils.getStackTraceStr(e))
+        logger.error(Utils.getStackTraceStr(e))
         logger.error(s"token $name issue tx proving failed")
         throw proveException()
     }
@@ -75,7 +75,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
       signedTx = prover.sign(tx)
     } catch {
       case e: Throwable =>
-        logger.error(utils.getStackTraceStr(e))
+        logger.error(Utils.getStackTraceStr(e))
         logger.error(s"merge tx proving failed")
         throw proveException()
     }
@@ -116,7 +116,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
       signedTx = prover.sign(tx)
     } catch {
       case e: Throwable =>
-        logger.error(utils.getStackTraceStr(e))
+        logger.error(Utils.getStackTraceStr(e))
         logger.error(s"Locking tx proving failed")
         throw proveException()
     }
@@ -185,11 +185,60 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts, utils: Utils) {
       signedTx = prover.sign(tx)
     } catch {
       case e: Throwable =>
-        logger.error(utils.getStackTraceStr(e))
+        logger.error(Utils.getStackTraceStr(e))
         logger.error(s"Distribution tx proving failed")
         throw proveException()
     }
     logger.info(s"Distribution creation tx built successfully")
+    signedTx
+  }
+
+  def distributionPayment(ctx: BlockchainContext, bankBox: InputBox, ticketBox: InputBox): SignedTransaction = {
+    val txB = ctx.newTxBuilder()
+    val bank = Distribution(bankBox)
+    val ticket = Ticket(ticketBox)
+
+    var bankOut: OutBox = null
+    var payment: OutBox = null
+    if (bank.tokenShare == 0) {
+      bankOut = boxes.getDistribution(txB, bankBox.getValue - bank.ergShare * ticket.stakeCount, bank.checkpoint, bank.fee, bank.ticketCount - 1, bank.ergShare)
+      payment = txB.outBoxBuilder()
+        .value(bank.ergShare * ticket.stakeCount + ticket.minBoxVal)
+        .contract(new ErgoTreeContract(ticket.recipientAddress.script))
+        .build()
+    }
+    else {
+      val tokenPayment = bank.tokenShare * ticket.stakeCount
+      val tokenCount = bankBox.getTokens.get(1).getValue - tokenPayment
+      val tokenId = bankBox.getTokens.get(1).getId.toString
+      bankOut = boxes.getDistribution(txB, bankBox.getValue - bank.ergShare * ticket.stakeCount,
+        bank.checkpoint, bank.fee, bank.ticketCount - 1, bank.ergShare, bank.tokenShare, tokenCount, tokenId)
+      payment = txB.outBoxBuilder()
+        .value(bank.ergShare * ticket.stakeCount + ticket.minBoxVal)
+        .contract(new ErgoTreeContract(ticket.recipientAddress.script))
+        .tokens(new ErgoToken(tokenId, tokenPayment))
+        .build()
+    }
+    val ticketOut = boxes.getTicket(txB, ticketBox.getValue - ticket.fee - ticket.minBoxVal, ticket.stakeCount, ticket.recipientAddress,
+      Array(ticket.InitialCheckpoint, ticket.checkpoint + 1, ticket.fee, ticket.minBoxVal), ticket.reservedTokenId)
+
+    val tx = txB.boxesToSpend(Seq(bankBox, ticketBox).asJava)
+      .fee(Configs.fee)
+      .outputs(bankOut, ticketOut, payment)
+      .sendChangeTo(Configs.owner.address.getErgoAddress)
+      .build()
+
+    val prover = ctx.newProverBuilder().build()
+    var signedTx: SignedTransaction = null
+    try {
+      signedTx = prover.sign(tx)
+    } catch {
+      case e: Throwable =>
+        logger.error(Utils.getStackTraceStr(e))
+        logger.error(s"Payment tx proving failed")
+        throw proveException()
+    }
+    logger.info(s"Payment tx built successfully")
     signedTx
   }
 }

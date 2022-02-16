@@ -8,13 +8,13 @@ import scorex.util.encode.{Base16, Base64}
 import javax.inject.{Inject, Singleton}
 
 @Singleton
-class Contracts @Inject()(client: Client, utils: Utils){
+class Contracts @Inject()(client: Client){
   lazy val income: ErgoContract = generateIncomeContract()
   lazy val distribution: ErgoContract = generateDistributionContract()
   lazy val ticket: ErgoContract = generateTicketContract()
   lazy val config: ErgoContract = generateConfigContract()
-  lazy val incomeAddress: Address = utils.generateAddress(income)
-  lazy val configAddress: Address = utils.generateAddress(config)
+  lazy val incomeAddress: Address = Utils.generateAddress(income)
+  lazy val configAddress: Address = Utils.generateAddress(config)
 
 
   private def generateIncomeContract(): ErgoContract ={
@@ -53,8 +53,8 @@ class Contracts @Inject()(client: Client, utils: Utils){
         .replace("DISTRIBUTION_TOKEN", Base64.encode(Base16.decode(Configs.token.distribution).get))
         .replace("LOCKING_TOKEN", Base64.encode(Base16.decode(Configs.token.locking).get))
         .replace("STAKING_TOKEN", Base64.encode(Base16.decode(Configs.token.staking).get))
-        .replace("DISTRIBUTION_HASH", Base64.encode(utils.getContractScriptHash(distribution)))
-        .replace("TICKET_HASH", Base64.encode(utils.getContractScriptHash(ticket)))
+        .replace("DISTRIBUTION_HASH", Base64.encode(Utils.getContractScriptHash(distribution)))
+        .replace("TICKET_HASH", Base64.encode(Utils.getContractScriptHash(ticket)))
       ctx.compileContract(ConstantsBuilder.create().build(), script)
     })
   }
