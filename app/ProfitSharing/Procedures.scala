@@ -1,7 +1,7 @@
 package ProfitSharing
 
 import helpers.{Configs, Utils, internalException, notCoveredException, proveException}
-import models.Config
+import models.{Config, Distribution}
 import network.Client
 import org.ergoplatform.appkit.{BlockchainContext, SignedTransaction}
 import play.api.Logger
@@ -137,6 +137,40 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
     case e: notCoveredException => logger.error(e.getMessage)
     case _: proveException => logger.error("Distribution creation failed")
     case _: internalException => logger.warn("Something went wrong on distribution creation")
+    case e: Throwable => logger.error(Utils.getStackTraceStr(e))
+  }
+
+  def payment(ctx: BlockchainContext): Unit = try{
+    var configBox = boxes.findConfig(ctx)
+    boxes.findDistributions().foreach(distributionBox =>{
+      var spendingBox = distributionBox
+      val distribution = Distribution(distributionBox)
+      if(distribution.ticketCount > 0){
+        boxes.findTickets(distribution.checkpoint).foreach(ticketBox =>{
+          val signedTx = transactions.distributionPaymentTx(ctx, spendingBox, ticketBox)
+          var txId = ctx.sendTransaction(signedTx)
+          if (txId == null) logger.error(s"Distribution payment tx sending failed")
+          else {
+            txId = txId.replaceAll("\"", "")
+            logger.info(s"Distribution payment tx Completed successfully with txId: " + txId)
+            spendingBox = signedTx.getOutputsToSpend.get(0)
+            logger.info(s"${Distribution(spendingBox).ticketCount} number of payments left for the distribution with checkpoint ${distribution.checkpoint}")
+          }
+        })
+      } else {
+        val signedTx = transactions.distributionRedeemTx(ctx, configBox, distributionBox)
+        var txId = ctx.sendTransaction(signedTx)
+        if (txId == null) logger.error(s"Distribution redeem tx sending failed")
+        else {
+          txId = txId.replaceAll("\"", "")
+          logger.info(s"Distribution redeem tx Completed successfully for checkpoint ${distribution.checkpoint} with txId: " + txId)
+          configBox = signedTx.getOutputsToSpend.get(0)
+        }
+      }
+    })
+  } catch {
+    case _: proveException => logger.error("Distribution payment failed")
+    case _: internalException => logger.warn("Something went wrong on distribution payment")
     case e: Throwable => logger.error(Utils.getStackTraceStr(e))
   }
 }

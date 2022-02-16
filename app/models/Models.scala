@@ -46,9 +46,9 @@ object Ticket{
   def apply(ticketBox: InputBox): Ticket ={
     val stakeCount = ticketBox.getTokens.get(1).getValue
     val ticketAddress = Utils.getAddress(ticketBox.getRegisters.get(1).getValue.asInstanceOf[Coll[Byte]].toArray)
-    val initialCheckpoint = ticketBox.getRegisters.get(0).getValue.asInstanceOf[Coll[Long]].toArray(0)
-    val checkpoint = ticketBox.getRegisters.get(0).getValue.asInstanceOf[Coll[Long]].toArray(1)
     val ticketR4 = ticketBox.getRegisters.get(0).getValue.asInstanceOf[Coll[Long]].toArray
+    val initialCheckpoint = ticketR4(0)
+    val checkpoint = ticketR4(1)
     val fee = ticketR4(2)
     val minBoxVal = ticketR4(3)
     val reservedToken: ErgoId = new ErgoId(ticketBox.getRegisters.get(2).getValue.asInstanceOf[Coll[Byte]].toArray)

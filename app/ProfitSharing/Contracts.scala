@@ -15,7 +15,8 @@ class Contracts @Inject()(client: Client){
   lazy val config: ErgoContract = generateConfigContract()
   lazy val incomeAddress: Address = Utils.generateAddress(income)
   lazy val configAddress: Address = Utils.generateAddress(config)
-
+  lazy val distributionAddress: Address = Utils.generateAddress(distribution)
+  lazy val ticketAddress: Address = Utils.generateAddress(ticket)
 
   private def generateIncomeContract(): ErgoContract ={
     client.getClient.execute(ctx => {

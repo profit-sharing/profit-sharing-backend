@@ -1,6 +1,7 @@
 package ProfitSharing
 
 import helpers.{Configs, Utils, connectionException, internalException}
+import models.{Distribution, Ticket}
 import network.{Client, Explorer}
 import org.ergoplatform.ErgoAddress
 import org.ergoplatform.appkit.impl.ErgoTreeContract
@@ -80,12 +81,61 @@ class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
   }
 
   /**
+   * @param box the id of the box that is going to be checked
+   * @return True if the specified box is in mempool, and False otherwise
+   */
+  def isBoxInMemPool(box: InputBox) : Boolean = {
+    try {
+      val address = Utils.getAddress(box.getErgoTree.bytes)
+      val transactions = Json.parse(explorer.getTxsInMempoolByAddress(address.toString).toString())
+      if (transactions != null) {
+        (transactions \ "items").as[List[JsValue]].exists(tx =>{
+          if((tx \ "inputs").as[JsValue].toString().contains(box.getId.toString)) true
+          else false
+        })
+      } else {
+        false
+      }
+    } catch {
+      case e: JsResultException =>
+        logger.error(e.getMessage)
+        throw internalException()
+      case e: Throwable =>
+        logger.error(Utils.getStackTraceStr(e))
+        throw internalException()
+    }
+  }
+
+  /**
    * @return last config box in the network (considering the mempool)
    */
   def findConfig(ctx: BlockchainContext): InputBox ={
     val configJson = (explorer.getUnspentTokenBoxes(Configs.token.configNFT, 0, 10) \ "items").as[List[JsValue]].head
     val configBox = ctx.getBoxesById((configJson \ "boxId").as[String]).head
     findLastMempoolBoxFor(contracts.configAddress.toString, configBox, ctx)
+  }
+
+  /**
+   * @return the list of all distribution boxes in network, sorted by its checkpoint
+   */
+  def findDistributions(): List[InputBox] ={
+    client.getAllUnspentBox(contracts.distributionAddress)
+      .filter(_.getTokens.size() > 0)
+      .filter(_.getTokens.get(0).getId.toString == Configs.token.distribution)
+      .filter(!isBoxInMemPool(_))
+      .sortBy(Distribution(_).checkpoint)
+  }
+
+  /**
+   * @param checkpoint ticket checkpoint
+   * @return the list of all ticket boxes with the required checkpoint
+   */
+  def findTickets(checkpoint: Long): List[InputBox] ={
+    client.getAllUnspentBox(contracts.ticketAddress)
+      .filter(_.getTokens.size() > 0)
+      .filter(_.getTokens.get(0).getId.toString == Configs.token.locking)
+      .filter(!isBoxInMemPool(_))
+      .filter(Ticket(_).checkpoint == checkpoint)
   }
 
   /**

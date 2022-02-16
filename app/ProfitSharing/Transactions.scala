@@ -5,6 +5,7 @@ import models.{Config, Distribution, Ticket}
 import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoToken, ErgoValue, InputBox, OutBox, SignedTransaction, UnsignedTransaction}
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import play.api.Logger
+import special.collection.Coll
 
 import scala.collection.JavaConverters._
 import javax.inject.Inject
@@ -193,7 +194,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
     signedTx
   }
 
-  def distributionPayment(ctx: BlockchainContext, bankBox: InputBox, ticketBox: InputBox): SignedTransaction = {
+  def distributionPaymentTx(ctx: BlockchainContext, bankBox: InputBox, ticketBox: InputBox): SignedTransaction = {
     val txB = ctx.newTxBuilder()
     val bank = Distribution(bankBox)
     val ticket = Ticket(ticketBox)
@@ -225,6 +226,32 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
     val tx = txB.boxesToSpend(Seq(bankBox, ticketBox).asJava)
       .fee(Configs.fee)
       .outputs(bankOut, ticketOut, payment)
+      .sendChangeTo(Configs.owner.address.getErgoAddress)
+      .build()
+
+    val prover = ctx.newProverBuilder().build()
+    var signedTx: SignedTransaction = null
+    try {
+      signedTx = prover.sign(tx)
+    } catch {
+      case e: Throwable =>
+        logger.error(Utils.getStackTraceStr(e))
+        logger.error(s"Payment tx proving failed")
+        throw proveException()
+    }
+    logger.info(s"Payment tx built successfully")
+    signedTx
+  }
+
+  def distributionRedeemTx(ctx: BlockchainContext, configBox: InputBox, bankBox: InputBox): SignedTransaction = {
+    val txB = ctx.newTxBuilder()
+    val r4 = configBox.getRegisters.get(0).getValue.asInstanceOf[Coll[Long]].toArray
+    val fee = r4(5)
+    val configOut: OutBox = boxes.getConfig(txB, configBox.getValue, configBox.getTokens.get(1).getValue + 1, configBox.getTokens.get(2).getValue, r4)
+
+    val tx = txB.boxesToSpend(Seq(configBox, bankBox).asJava)
+      .fee(fee)
+      .outputs(configOut)
       .sendChangeTo(Configs.owner.address.getErgoAddress)
       .build()
 
