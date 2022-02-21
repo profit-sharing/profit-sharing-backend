@@ -26,10 +26,11 @@ class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
     val ergIncomes = boxes.filter(_.getTokens.size() == 0)
     if(ergIncomes.size >= Configs.incomeMerge.min) result = result :+ ergIncomes.take(Configs.incomeMerge.min)
 
-    val tokens = boxes.filter(_.getTokens.size() > 0).map(_.getTokens.get(0).getId).distinct
+    val tokenIncomes = boxes.filter(_.getTokens.size() > 0)
+    val tokens = tokenIncomes.map(_.getTokens.get(0).getId).distinct
     for(token <- tokens){
-      val tokenIncomes = boxes.filter(_.getTokens.size() > 0).filter(_.getTokens.get(0).getId == token)
-      if(tokenIncomes.size >= Configs.incomeMerge.min) result = result :+ tokenIncomes
+      val tokenIncome = tokenIncomes.filter(_.getTokens.get(0).getId == token)
+      if(tokenIncome.size >= Configs.incomeMerge.min) result = result :+ tokenIncome
     }
     result
   }
@@ -120,9 +121,9 @@ class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
    */
   def findDistributions(): List[InputBox] ={
     client.getAllUnspentBox(contracts.distributionAddress)
-      .filter(_.getTokens.size() > 0)
-      .filter(_.getTokens.get(0).getId.toString == Configs.token.distribution)
-      .filter(!isBoxInMemPool(_))
+      .filter(box => box.getTokens.size() > 0 &&
+        box.getTokens.get(0).getId.toString == Configs.token.distribution  &&
+        !isBoxInMemPool(box))
       .sortBy(Distribution(_).checkpoint)
   }
 
@@ -132,10 +133,10 @@ class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
    */
   def findTickets(checkpoint: Long): List[InputBox] ={
     client.getAllUnspentBox(contracts.ticketAddress)
-      .filter(_.getTokens.size() > 0)
-      .filter(_.getTokens.get(0).getId.toString == Configs.token.locking)
-      .filter(!isBoxInMemPool(_))
-      .filter(Ticket(_).checkpoint == checkpoint)
+      .filter(box => box.getTokens.size() > 0 &&
+        box.getTokens.get(0).getId.toString == Configs.token.locking &&
+        !isBoxInMemPool(box) &&
+        Ticket(box).checkpoint == checkpoint)
   }
 
   /**

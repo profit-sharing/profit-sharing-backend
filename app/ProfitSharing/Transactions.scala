@@ -1,6 +1,6 @@
 package ProfitSharing
 
-import helpers.{Configs, Utils, notCoveredException, proveException}
+import helpers.{Configs, Utils, failedTxException, notCoveredException, proveException}
 import models.{Config, Distribution, Ticket}
 import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoToken, ErgoValue, InputBox, OutBox, SignedTransaction, UnsignedTransaction}
 import org.ergoplatform.appkit.impl.ErgoTreeContract
@@ -38,19 +38,23 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
     val prover = ctx.newProverBuilder()
       .withDLogSecret(Configs.initializer.secret)
       .build()
-    var signedTx: SignedTransaction = null
-    try {
-      signedTx = prover.sign(tx)
+    val signedTx: SignedTransaction = try {
+      prover.sign(tx)
     } catch {
       case e: Throwable =>
         logger.error(Utils.getStackTraceStr(e))
         logger.error(s"token $name issue tx proving failed")
         throw proveException()
     }
-    val txId = ctx.sendTransaction(signedTx)
-    if (txId == null) logger.error(s"Token Issue transaction sending failed")
-    else logger.info(s"Token $name issued successfully with txId: $txId")
-    signedTx
+    try{
+      ctx.sendTransaction(signedTx)
+      logger.info(s"Token $name issued successfully with txId: ${signedTx.getId}")
+      signedTx
+    } catch{
+      case _: Throwable =>
+        logger.error(s"Token Issue transaction sending failed")
+        throw failedTxException()
+    }
   }
 
   def mergeIncomesTx(incomes: Seq[InputBox], ctx: BlockchainContext): SignedTransaction = {
@@ -71,17 +75,16 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
       .build()
 
     val prover = ctx.newProverBuilder().build()
-    var signedTx: SignedTransaction = null
     try {
-      signedTx = prover.sign(tx)
+      val signedTx = prover.sign(tx)
+      logger.info(s"${incomes.size} Incomes with total value of $totalValue merged successfully")
+      signedTx
     } catch {
       case e: Throwable =>
         logger.error(Utils.getStackTraceStr(e))
         logger.error(s"merge tx proving failed")
         throw proveException()
     }
-    logger.info(s"${incomes.size} Incomes with total value of $totalValue merged successfully")
-    signedTx
   }
 
   def lockingTx(tokenBox: InputBox, ownerAddress: Address, configBox: InputBox, ctx: BlockchainContext): SignedTransaction ={
@@ -112,16 +115,15 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
     val prover = ctx.newProverBuilder()
       .withDLogSecret(Configs.user.secret)
       .build()
-    var signedTx: SignedTransaction = null
     try {
-      signedTx = prover.sign(tx)
+      val signedTx = prover.sign(tx)
+      signedTx
     } catch {
       case e: Throwable =>
         logger.error(Utils.getStackTraceStr(e))
         logger.error(s"Locking tx proving failed")
         throw proveException()
     }
-    signedTx
   }
 
   def distributionCreationTx(ctx: BlockchainContext, income: InputBox, configBox: InputBox): SignedTransaction = {
@@ -163,9 +165,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
       outIncome = boxes.getIncome(txB, ergRemainder, income.getTokens.get(0).getValue - tokenCount, tokenId)
     }
     else {
-      logger.warn(s"stakeCount * minErgShare: ${config.stakeCount * config.minErgShare}")
-      logger.warn(s"distFee $distFee")
-      logger.warn(s"income: ${income.getValue}")
+      logger.warn(s"stakeCount * minErgShare: ${config.stakeCount * config.minErgShare}, and distFee: $distFee, and income: ${income.getValue}")
       throw notCoveredException()
     }
 
@@ -181,17 +181,16 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
     else tx = txBuilder.outputs(outConfig, outDistribution).build()
 
     val prover = ctx.newProverBuilder().build()
-    var signedTx: SignedTransaction = null
     try {
-      signedTx = prover.sign(tx)
+      val signedTx = prover.sign(tx)
+      logger.info(s"Distribution creation tx built successfully")
+      signedTx
     } catch {
       case e: Throwable =>
         logger.error(Utils.getStackTraceStr(e))
         logger.error(s"Distribution tx proving failed")
         throw proveException()
     }
-    logger.info(s"Distribution creation tx built successfully")
-    signedTx
   }
 
   def distributionPaymentTx(ctx: BlockchainContext, bankBox: InputBox, ticketBox: InputBox): SignedTransaction = {
@@ -230,17 +229,16 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
       .build()
 
     val prover = ctx.newProverBuilder().build()
-    var signedTx: SignedTransaction = null
     try {
-      signedTx = prover.sign(tx)
+      val signedTx = prover.sign(tx)
+      logger.info(s"Payment tx built successfully")
+      signedTx
     } catch {
       case e: Throwable =>
         logger.error(Utils.getStackTraceStr(e))
         logger.error(s"Payment tx proving failed")
         throw proveException()
     }
-    logger.info(s"Payment tx built successfully")
-    signedTx
   }
 
   def distributionRedeemTx(ctx: BlockchainContext, configBox: InputBox, bankBox: InputBox): SignedTransaction = {
@@ -256,16 +254,15 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
       .build()
 
     val prover = ctx.newProverBuilder().build()
-    var signedTx: SignedTransaction = null
     try {
-      signedTx = prover.sign(tx)
+      val signedTx = prover.sign(tx)
+      logger.info(s"Payment tx built successfully")
+      signedTx
     } catch {
       case e: Throwable =>
         logger.error(Utils.getStackTraceStr(e))
         logger.error(s"Payment tx proving failed")
         throw proveException()
     }
-    logger.info(s"Payment tx built successfully")
-    signedTx
   }
 }

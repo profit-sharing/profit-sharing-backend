@@ -1,6 +1,6 @@
 package ProfitSharing
 
-import helpers.{Configs, Utils, internalException, notCoveredException, proveException}
+import helpers.{Configs, Utils, failedTxException, internalException, notCoveredException, proveException}
 import models.{Config, Distribution}
 import network.Client
 import org.ergoplatform.appkit.{BlockchainContext, SignedTransaction}
@@ -46,26 +46,25 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
     val prover = ctx.newProverBuilder()
       .withDLogSecret(Configs.initializer.secret)
       .build()
-    var signedTx: SignedTransaction = null
-    try {
-      signedTx = prover.sign(tx)
+    val signedTx: SignedTransaction = try {
+      prover.sign(tx)
     } catch {
       case e: Throwable =>
         logger.error(Utils.getStackTraceStr(e))
         logger.error(s"config creation tx proving failed")
         throw proveException()
     }
-    val txId = ctx.sendTransaction(signedTx)
-    if (txId == null) {
-      logger.error(s"config creation tx sending failed")
-      List()
-    }
-    else {
-      logger.info(s" config box created successfully with txId: $txId")
+    try{
+      ctx.sendTransaction(signedTx)
+      logger.info(s"config box created successfully with txId: ${signedTx.getId}")
       List(configNFT, distributionToken, lockingToken, stakingToken)
+    } catch{
+      case _: Throwable =>
+        logger.error(s"Config box creation tx sending failed")
+        List()
     }
   } catch {
-    case _: proveException =>
+    case _: proveException | _: failedTxException =>
       logger.error("initialization failed")
       List()
     case e: Throwable =>
@@ -82,11 +81,12 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
       for(incomeSet <- incomes) {
         try {
           val signedTx = transactions.mergeIncomesTx(incomeSet, ctx)
-          var txId = ctx.sendTransaction(signedTx)
-          if (txId == null) logger.error(s"Merge transaction sending failed")
-          else {
-            txId = txId.replaceAll("\"", "")
-            logger.info(s"Merge Transaction Sent with TxId: " + txId)
+          try{
+            ctx.sendTransaction(signedTx)
+            logger.info(s"Merge tx Sent with TxId: ${signedTx.getId}")
+          } catch{
+            case _: Throwable =>
+              logger.error(s"Merge tx sending failed")
           }
         } catch {
           case _: proveException =>
@@ -104,11 +104,12 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
     val userBox = client.getAllUnspentBox(Configs.user.address).filter(_.getTokens.size() > 0)
       .filter(_.getTokens.get(0).getId.toString == Configs.token.staking).filter(_.getValue >= Configs.initializer.minTicketValue + Configs.fee*2).head
     val signedTx = transactions.lockingTx(userBox, Configs.user.address, boxes.findConfig(ctx), ctx)
-    var txId = ctx.sendTransaction(signedTx)
-    if (txId == null) logger.error(s"Lock transaction sending failed")
-    else {
-      txId = txId.replaceAll("\"", "")
-      logger.info(s"Lock Transaction Completed successfully with TxId: " + txId)
+    try{
+      ctx.sendTransaction(signedTx)
+      logger.info(s"Lock tx Sent with TxId: ${signedTx.getId}")
+    } catch{
+      case _: Throwable =>
+        logger.error(s"Lock tx sending failed")
     }
   } catch {
     case _: proveException => logger.error("Locking failed")
@@ -124,12 +125,12 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
         (income.getTokens.size() > 0 && income.getTokens.get(0).getValue >= config.minTokenShare * config.stakeCount)) {
         logger.info("one income hits the threshold creating the distribution")
         val signedTx = transactions.distributionCreationTx(ctx, income, configBox)
-        var txId = ctx.sendTransaction(signedTx)
-        if (txId == null) logger.error(s"Distribution creation tx sending failed")
-        else {
-          txId = txId.replaceAll("\"", "")
-          logger.info(s"Distribution creation tx Completed successfully with txId: " + txId)
-          configBox = signedTx.getOutputsToSpend.get(0)
+        try{
+          ctx.sendTransaction(signedTx)
+          logger.info(s"Distribution creation tx Sent with TxId: ${signedTx.getId}")
+        } catch{
+          case _: Throwable =>
+            logger.error(s"Distribution creation tx sending failed")
         }
       }
     })
@@ -148,23 +149,24 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
       if(distribution.ticketCount > 0){
         boxes.findTickets(distribution.checkpoint).foreach(ticketBox =>{
           val signedTx = transactions.distributionPaymentTx(ctx, spendingBox, ticketBox)
-          var txId = ctx.sendTransaction(signedTx)
-          if (txId == null) logger.error(s"Distribution payment tx sending failed")
-          else {
-            txId = txId.replaceAll("\"", "")
-            logger.info(s"Distribution payment tx Completed successfully with txId: " + txId)
+          try{
+            ctx.sendTransaction(signedTx)
+            logger.info(s"Distribution payment tx Sent with TxId: ${signedTx.getId}")
             spendingBox = signedTx.getOutputsToSpend.get(0)
-            logger.info(s"${Distribution(spendingBox).ticketCount} number of payments left for the distribution with checkpoint ${distribution.checkpoint}")
+            logger.debug(s"${Distribution(spendingBox).ticketCount} number of payments left for the distribution with checkpoint ${distribution.checkpoint}")
+          } catch{
+            case _: Throwable =>
+              logger.error(s"Distribution payment tx sending failed")
           }
         })
       } else {
         val signedTx = transactions.distributionRedeemTx(ctx, configBox, distributionBox)
-        var txId = ctx.sendTransaction(signedTx)
-        if (txId == null) logger.error(s"Distribution redeem tx sending failed")
-        else {
-          txId = txId.replaceAll("\"", "")
-          logger.info(s"Distribution redeem tx Completed successfully for checkpoint ${distribution.checkpoint} with txId: " + txId)
-          configBox = signedTx.getOutputsToSpend.get(0)
+        try{
+          ctx.sendTransaction(signedTx)
+          logger.info(s"Distribution redeem tx Sent with TxId: ${signedTx.getId}")
+        } catch{
+          case _: Throwable =>
+            logger.error(s"Distribution redeem tx sending failed")
         }
       }
     })
