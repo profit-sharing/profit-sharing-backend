@@ -184,13 +184,13 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
    *    2- Calling distributionCreationTx function
    * Expected Output:
    *    The function should return a transaction created the distribution box from income
-   *    transaction must have 3 outputs, config box, distribution and fee
+   *    transactions must have 4 outputs, config box, distribution, remainderIncome and fee
    */
   property("Testing distribution creation tx over incomes") {
     val mockedEnv = new MockedEnv(client, contracts)
     val transactions = getMockedTransaction(mockedEnv)
     val mockedIncomeBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
-      .value(1e9.toLong + 2*Configs.fee)
+      .value(1e9.toLong + 3*Configs.fee + 1L)
       .contract(contracts.income)
       .build().convertToInputWith(mockedEnv.randomId(), 1)
     val mockedConfigBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
@@ -203,11 +203,26 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
       .build().convertToInputWith(mockedEnv.randomId(), 1)
     val tx = transactions.distributionCreationTx(mockedEnv.getMockedCtx, mockedIncomeBox, mockedConfigBox)
 
-    tx.getOutputsToSpend.size() should be (3)
+    tx.getOutputsToSpend.size() should be (4)
     tx.getOutputsToSpend.get(0).getTokens.get(1).getValue should be (99)
     tx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString should be (Configs.token.distribution)
-    tx.getOutputsToSpend.get(1).getValue should be (1e9.toLong + Configs.fee)
-    tx.getOutputsToSpend.get(2).getValue should be (Configs.fee)
+    tx.getOutputsToSpend.get(1).getValue should be (1e9.toLong + 2*Configs.fee - Configs.minBoxErg)
+    tx.getOutputsToSpend.get(2).getValue should be (Configs.minBoxErg + 1L)
+
+    val mockedIncomeBox2 = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
+      .value(1e9.toLong + Configs.fee)
+      .contract(contracts.income)
+      .tokens(new ErgoToken(mockedEnv.tokenId2, 1123))
+      .build().convertToInputWith(mockedEnv.randomId(), 1)
+    val tx2 = transactions.distributionCreationTx(mockedEnv.getMockedCtx, mockedIncomeBox2, mockedConfigBox)
+
+    tx2.getOutputsToSpend.size() should be (4)
+    tx2.getOutputsToSpend.get(0).getTokens.get(1).getValue should be (99)
+    tx2.getOutputsToSpend.get(1).getTokens.get(0).getId.toString should be (Configs.token.distribution)
+    tx2.getOutputsToSpend.get(1).getTokens.get(1).getValue should be (1120)
+    tx2.getOutputsToSpend.get(1).getValue should be (1e9.toLong - Configs.minBoxErg)
+    tx2.getOutputsToSpend.get(2).getValue should be (Configs.minBoxErg)
+    tx2.getOutputsToSpend.get(2).getTokens.get(0).getValue should be (3)
   }
 
   /**

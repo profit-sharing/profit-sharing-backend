@@ -128,6 +128,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
         try{
           ctx.sendTransaction(signedTx)
           logger.info(s"Distribution creation tx Sent with TxId: ${signedTx.getId}")
+          configBox = signedTx.getOutputsToSpend.get(0)
         } catch{
           case _: Throwable =>
             logger.error(s"Distribution creation tx sending failed")
