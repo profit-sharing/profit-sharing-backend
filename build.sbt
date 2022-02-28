@@ -38,8 +38,10 @@ lazy val testSettings = Seq(
   publishArtifact in Test := true,
   publishArtifact in(Test, packageSrc) := true,
   publishArtifact in(Test, packageDoc) := false,
-  test in assembly := {})
-
+  test in assembly := {},
+  fork in Test := true,
+  javaOptions in Test += "-Dconfig.file=conf/application.test.conf"
+)
 
 assemblyMergeStrategy in assembly := {
   case PathList("reference.conf") => MergeStrategy.concat

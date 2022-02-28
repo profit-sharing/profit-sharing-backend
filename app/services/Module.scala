@@ -1,4 +1,5 @@
-import services.StartupService
+package services
+
 import com.google.inject.AbstractModule
 
 /**

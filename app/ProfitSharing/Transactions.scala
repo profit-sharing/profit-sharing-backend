@@ -16,7 +16,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
   def tokenIssueTx(ctx: BlockchainContext, count: Long, inputs: Seq[InputBox], address: Address, name: String, description: String): SignedTransaction ={
     val txB = ctx.newTxBuilder()
 
-    val totalValue: Long = inputs.map(item => item.getValue).reduce((a, b) => a + b)
+    val totalValue: Long = inputs.map(item => item.getValue.toLong).sum
     val output = txB.outBoxBuilder()
       .value(totalValue - 2*Configs.fee)
       .contract(new ErgoTreeContract(address.getErgoAddress.script))

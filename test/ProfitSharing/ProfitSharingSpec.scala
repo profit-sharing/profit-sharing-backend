@@ -4,16 +4,29 @@ package ProfitSharing
 import helpers.{Configs, Utils}
 import org.scalatest.propspec._
 import network.{Client, Explorer}
+import services.Module
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import org.ergoplatform.appkit.{ErgoId, ErgoToken, ErgoValue, InputBox, SignedTransaction}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.matchers.should
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.{Application, Mode}
 
 import scala.collection.immutable._
 import scala.collection.JavaConverters._
 
-class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
+class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAppPerSuite{
+  implicit override lazy val app: Application = new GuiceApplicationBuilder().
+    configure(
+      "initializer.secret" -> "4efa10862d8c2629b6168ffa9a92dd4c504d0c89fddb6b79845efc5218922ac",
+      "initializer.address" -> "9fJnTERZm8QKFsf6iC7JNB9VRvYVm9ghqrZZxnLZNrwrUfBqr9c"
+    )
+    .in(Mode.Test)
+    .disable[Module]
+    .build
+
   val client = new Client()
   client.setClient()
   val contracts = new Contracts(client)
