@@ -2,6 +2,7 @@ package helpers
 
 import java.io.{PrintWriter, StringWriter}
 import javax.inject.{Inject, Singleton}
+import io.circe.{Json => ciJson}
 
 import play.api.Logger
 import play.api.libs.json._
@@ -59,14 +60,12 @@ object Utils {
     val outputs = (txJson \ "outputs").as[JsValue].toString().replaceAll("id", "boxId").replaceAll("txId", "transactionId")
     val dataInputs = (txJson\ "dataInputs").as[JsValue].toString()
     val id = (txJson \ "id").as[String]
-    val newJson = JsObject(
-      Seq(
-        "name" -> JsString(id),
-        "inputs" -> JsString(inputs),
-        "dataInputs" -> JsString(dataInputs),
-        "outputs"-> JsString(outputs)
-      )
-    ).toString()
+    val newJson = s"""{
+          "id" : "$id",
+          "inputs" : $inputs,
+          "dataInputs" : $dataInputs,
+          "outputs" : $outputs
+          }"""
     ctx.signedTxFromJson(newJson.replaceAll("null", "\"\""))
   }
 }

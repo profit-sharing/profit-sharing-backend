@@ -14,6 +14,7 @@ class MockedEnv (client: Client, contracts: Contracts) {
   private val mockedClient = mock(classOf[Client])
   private val mockedCtx: BlockchainContext = mock(classOf[BlockchainContext])
   private val mockedExplorer: Explorer = mock(classOf[Explorer])
+  val dataset: testDataset = client.getClient.execute(new testDataset(_))
   val tokenId1 = "00ee077854471a04fbef18a5a971b50fb39f52fc6f6b3b8d0682ce2c48f6ebef"
   val tokenId2 = "11ee077854471a04fbef18a5a971b50fb39f52fc6f6b3b8d0682ce2c48f6ebef"
 
@@ -77,12 +78,7 @@ class MockedEnv (client: Client, contracts: Contracts) {
   })
   when(mockedCtx.sendTransaction(any())).thenReturn(randomId())
 
-  when(mockedExplorer.getUnconfirmedTxByAddress(contracts.configAddress.toString)).thenReturn(
-    JsObject(
-      Seq(
-        "items" -> JsArray(IndexedSeq()),
-        "total" -> JsNumber(0)
-      )
-    )
+  when(mockedExplorer.getUnconfirmedTxByAddress(dataset.lastMempoolBoxTest._2)).thenReturn(
+    dataset.lastMempoolBoxTest._1
   )
 }

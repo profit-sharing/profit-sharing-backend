@@ -3,33 +3,22 @@ package ProfitSharing
 
 import helpers.{Configs, Utils}
 import org.scalatest.propspec._
-import network.{Client, Explorer}
-import services.Module
+import network.Client
 import org.ergoplatform.appkit.impl.ErgoTreeContract
-import org.ergoplatform.appkit.{ErgoId, ErgoToken, ErgoValue, InputBox, SignedTransaction}
+import org.ergoplatform.appkit.{Address, ErgoId, ErgoToken, ErgoValue, InputBox, SignedTransaction}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.matchers.should
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.{Application, Mode}
+import java.math.BigInteger
 
 import scala.collection.immutable._
 import scala.collection.JavaConverters._
 
-class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAppPerSuite{
-  implicit override lazy val app: Application = new GuiceApplicationBuilder().
-    configure(
-      "initializer.secret" -> "4efa10862d8c2629b6168ffa9a92dd4c504d0c89fddb6b79845efc5218922ac",
-      "initializer.address" -> "9fJnTERZm8QKFsf6iC7JNB9VRvYVm9ghqrZZxnLZNrwrUfBqr9c"
-    )
-    .in(Mode.Test)
-    .disable[Module]
-    .build
-
+class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   val client = new Client()
   client.setClient()
   val contracts = new Contracts(client)
+  val dataset: testDataset = client.getClient.execute(new testDataset(_))
 
   def getMockedBoxes(mockedEnv: MockedEnv): Boxes = new Boxes(mockedEnv.getMockedClient, contracts, mockedEnv.getMockedExplorer)
   def getMockedTransaction(mockedEnv: MockedEnv): Transactions = {
@@ -40,6 +29,22 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
     val boxes = new Boxes(mockedEnv.getMockedClient, contracts, mockedEnv.getMockedExplorer)
     val transactions = new Transactions(boxes, contracts)
     new Procedures(mockedEnv.getMockedClient, boxes, contracts, transactions)
+  }
+
+  /**
+   * Target: testing JsonToTransaction
+   * Dependencies:
+   *    Ctx
+   * Procedure:
+   *    1- mocking environment
+   *    2- Calling JsonToTransaction function
+   * Expected Output:
+   *    The function should construct a valid signedTransaction with desired id
+   */
+  property("Testing transaction creation from json") {
+    val mockedEnv = new MockedEnv(client, contracts)
+    val result = Utils.JsonToTransaction(dataset.jsonToTxTest._1, mockedEnv.getMockedCtx)
+    result.getId should be (dataset.jsonToTxTest._2)
   }
 
   /**
@@ -64,7 +69,6 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
     result(1).head.getTokens.get(0).getId.toString should be (mockedEnv.tokenId2)
   }
 
-  // TODO: Improve this test
   /**
    * Target: testing findLastMempoolBoxFor
    * Dependencies:
@@ -80,13 +84,11 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
   property("Testing last mempool box search") {
     val mockedEnv = new MockedEnv(client, contracts)
     val boxes = getMockedBoxes(mockedEnv)
-    val address = contracts.configAddress
-    val inputBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
-      .value(10000)
-      .contract(new ErgoTreeContract(address.getErgoAddress.script))
-      .build().convertToInputWith(mockedEnv.randomId(), 1)
-    val result = boxes.findLastMempoolBoxFor(address.toString, inputBox, mockedEnv.getMockedCtx)
-    result shouldEqual inputBox
+    val address = Address.create(dataset.lastMempoolBoxTest._2).getErgoAddress
+    val mockedInputBox = mock(classOf[InputBox])
+    when(mockedInputBox.getId).thenReturn(new ErgoId(new BigInteger(dataset.lastMempoolBoxTest._3, 16).toByteArray))
+    val result = boxes.findLastMempoolBoxFor(address.toString, mockedInputBox, mockedEnv.getMockedCtx)
+    result.getId.toString should be (dataset.lastMempoolBoxTest._4)
   }
 
   /**
@@ -96,7 +98,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    * Procedure:
    *    1- mocking environment
    *    2- mocking inputBox
-   *    2- Calling tokenIssue function
+   *    3- Calling tokenIssue function
    * Expected Output:
    *    The function should return a transaction issued a new token with required amount
    */
@@ -122,7 +124,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    * Procedure:
    *    1- mocking environment
    *    2- mocking inputBoxes
-   *    2- Calling mergeIncome function
+   *    3- Calling mergeIncome function
    * Expected Output:
    *    The function should return a transaction merging all input incomes
    */
@@ -153,7 +155,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    * Procedure:
    *    1- mocking environment
    *    2- mocking inputBoxes
-   *    2- Calling lockingTx function
+   *    3- Calling lockingTx function
    * Expected Output:
    *    The function should return a transaction locked the staking tokens
    *    transaction must have 4 outputs, config box, locked tokens, reserved token and fee
@@ -194,7 +196,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    * Procedure:
    *    1- mocking environment
    *    2- mocking inputBoxes
-   *    2- Calling distributionCreationTx function
+   *    3- Calling distributionCreationTx function
    * Expected Output:
    *    The function should return a transaction created the distribution box from income
    *    transactions must have 4 outputs, config box, distribution, remainderIncome and fee
@@ -245,7 +247,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    * Procedure:
    *    1- mocking environment
    *    2- mocking inputBoxes
-   *    2- Calling distributionPaymentTx function
+   *    3- Calling distributionPaymentTx function
    * Expected Output:
    *    The function should return a transaction paying the user stake based on its staking tokens
    */
@@ -286,7 +288,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    * Procedure:
    *    1- mocking environment
    *    2- mocking inputBoxes
-   *    2- Calling distributionRedeemTx function
+   *    3- Calling distributionRedeemTx function
    * Expected Output:
    *    The function should return a transaction which redeems the distribution token to the config box
    */
@@ -344,9 +346,9 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    *    Transactions
    * Procedure:
    *    1- mocking environment
-   *    1- mocking boxes object (getIncomes)
-   *    2- mocking transactions object (mergeIncomeTx)
-   *    3- Calling mergeIncome function
+   *    2- mocking boxes object (getIncomes)
+   *    3- mocking transactions object (mergeIncomeTx)
+   *    4- Calling mergeIncome function
    * Expected Output:
    *    The function should get incomes once
    *    The function should call mergeIncomeTx 2 times (2 input lists were passed)
@@ -356,7 +358,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
     val mockedBoxes: Boxes = mock(classOf[Boxes])
     doReturn(List(List(), List()), List(List(), List())).when(mockedBoxes).getIncomes
     val mockedTransactions: Transactions = mock(classOf[Transactions])
-    doReturn(null, null).when(mockedTransactions).mergeIncomesTx(List(), mockedEnv.getMockedCtx)
+    when(mockedTransactions.mergeIncomesTx(List(), mockedEnv.getMockedCtx)).thenReturn(dataset.signedMergeTx)
     val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions)
     procedures.mergeIncomes(mockedEnv.getMockedCtx)
     verify(mockedBoxes, times(1)).getIncomes
@@ -408,9 +410,9 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
    * Procedure:
    *    1- mocking environment
    *    2- mocking boxes
-   *    2- mocking signedTransaction (output of the distributionPaymentTx and distributionRedeemTx)
-   *    3- mocking transactions object (distributionPaymentTx and distributionRedeemTx)
-   *    4- Calling payment function
+   *    3- mocking signedTransaction (output of the distributionPaymentTx and distributionRedeemTx)
+   *    4- mocking transactions object (distributionPaymentTx and distributionRedeemTx)
+   *    5- Calling payment function
    * Expected Output:
    *    The function should create payments and finally destroy the distribution box which is finished working
    *    The function should call distributionPaymentTx twice, and distributionRedeemTx once
@@ -452,13 +454,9 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers with GuiceOneAp
     doReturn(mockedConfigBox, mockedConfigBox).when(mockedBoxes).findConfig(mockedEnv.getMockedCtx)
     doReturn(mockedBankBoxes, mockedBankBoxes).when(mockedBoxes).findDistributions()
     doReturn(mockedTicketBoxes, mockedTicketBoxes).when(mockedBoxes).findTickets(any())
-    val mockedSignedTx: SignedTransaction = mock(classOf[SignedTransaction])
-    when(mockedSignedTx.getOutputsToSpend).thenReturn(Seq(mockedConfigBox).asJava)
-    val mockedPaymentSignedTx: SignedTransaction = mock(classOf[SignedTransaction])
-    when(mockedPaymentSignedTx.getOutputsToSpend).thenReturn(Seq(mockedBankBoxes.head).asJava)
     val mockedTransactions: Transactions = mock(classOf[Transactions])
-    when(mockedTransactions.distributionPaymentTx(any(), any(), any())).thenReturn(mockedPaymentSignedTx)
-    when(mockedTransactions.distributionRedeemTx(any(), any(), any())).thenReturn(mockedSignedTx)
+    when(mockedTransactions.distributionPaymentTx(any(), any(), any())).thenReturn(dataset.signedPaymentTx)
+    when(mockedTransactions.distributionRedeemTx(any(), any(), any())).thenReturn(dataset.signedDistributionRedeemTx)
     val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions)
     procedures.payment(mockedEnv.getMockedCtx)
     verify(mockedTransactions, times(1)).distributionPaymentTx(any(), any(), any())
