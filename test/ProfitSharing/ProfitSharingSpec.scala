@@ -84,11 +84,69 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   property("Testing last mempool box search") {
     val mockedEnv = new MockedEnv(client, contracts)
     val boxes = getMockedBoxes(mockedEnv)
-    val address = Address.create(dataset.lastMempoolBoxTest._2).getErgoAddress
     val mockedInputBox = mock(classOf[InputBox])
     when(mockedInputBox.getId).thenReturn(new ErgoId(new BigInteger(dataset.lastMempoolBoxTest._3, 16).toByteArray))
-    val result = boxes.findLastMempoolBoxFor(address.toString, mockedInputBox, mockedEnv.getMockedCtx)
+    val result = boxes.findLastMempoolBoxFor(dataset.lastMempoolBoxTest._2, mockedInputBox, mockedEnv.getMockedCtx)
     result.getId.toString should be (dataset.lastMempoolBoxTest._4)
+  }
+
+  /**
+   * Target: testing isBoxInMemPool
+   * Dependencies:
+   *    Explorer & Ctx
+   * Procedure:
+   *    1- mocking environment
+   *    2- mocking input
+   *    3- Calling isBoxInMemPool function
+   * Expected Output:
+   *    The function should return true
+   */
+  property("Testing box in mempool check function") {
+    val mockedEnv = new MockedEnv(client, contracts)
+    val boxes = getMockedBoxes(mockedEnv)
+    val mockedInputBox = mock(classOf[InputBox])
+    when(mockedInputBox.getErgoTree).thenReturn(Address.create(dataset.boxInMempoolTest._2).getErgoAddress.script)
+    when(mockedInputBox.getId).thenReturn(new ErgoId(new BigInteger(dataset.boxInMempoolTest._3, 16).toByteArray))
+    val result = boxes.isBoxInMemPool(mockedInputBox)
+    result should be (true)
+  }
+
+  /**
+   * Target: testing findConfig
+   * Dependencies:
+   *    Ctx
+   * Procedure:
+   *    1- mocking environment
+   *    2- Calling findConfig function
+   * Expected Output:
+   *    The function should return the 10 valid distribution boxes
+   */
+  property("Testing finding distribution boxes") {
+    val mockedEnv = new MockedEnv(client, contracts)
+    val boxes = getMockedBoxes(mockedEnv)
+    val spyBoxes = spy(boxes)
+    doReturn(false: java.lang.Boolean, false: java.lang.Boolean).when(spyBoxes).isBoxInMemPool(any())
+    val result = spyBoxes.findDistributions()
+    result.size should be (10)
+  }
+
+  /**
+   * Target: testing findTickets
+   * Dependencies:
+   *    Ctx
+   * Procedure:
+   *    1- mocking environment
+   *    2- Calling findTickets function
+   * Expected Output:
+   *    The function should return the ticket boxes
+   */
+  property("Testing finding ticket boxes based on checkpoint") {
+    val mockedEnv = new MockedEnv(client, contracts)
+    val boxes = getMockedBoxes(mockedEnv)
+    val spyBoxes = spy(boxes)
+    doReturn(false: java.lang.Boolean, false: java.lang.Boolean).when(spyBoxes).isBoxInMemPool(any())
+    val result = spyBoxes.findTickets(101)
+    result.size should be (10)
   }
 
   /**

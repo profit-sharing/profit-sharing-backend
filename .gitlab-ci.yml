@@ -1,0 +1,11 @@
+mage: "mozilla/sbt:8u292_1.5.7"
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - sbt clean test
+
+

@@ -68,11 +68,18 @@ class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
     while (keys.contains(outBox.getId.toString)) {
       val txJson = txMap(outBox.getId.toString)
       val tmpTx = Utils.JsonToTransaction(txJson, ctx)
-      outBox = tmpTx.getOutputsToSpend.asScala.filter(box => Configs.addressEncoder.fromProposition(box.getErgoTree).toString == address).head
+      try {
+        outBox = tmpTx.getOutputsToSpend.asScala.filter(box => Configs.addressEncoder.fromProposition(box.getErgoTree).get.toString == address).head
+      } catch {
+        case _:java.util.NoSuchElementException =>
+          logger.debug(tmpTx.getOutputsToSpend.asScala.map(box => Configs.addressEncoder.fromProposition(box.getErgoTree).toString).toString())
+          logger.warn("Desired address not found in the outputs")
+          throw internalException()
+      }
     }
     outBox
   } catch {
-    case e: connectionException => throw e
+    case _: connectionException | _: internalException => throw internalException()
     case e: JsResultException =>
       logger.error(e.getMessage)
       throw internalException()

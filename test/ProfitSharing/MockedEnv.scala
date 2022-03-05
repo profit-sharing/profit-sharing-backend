@@ -1,11 +1,11 @@
 package ProfitSharing
-import helpers.Configs
+import helpers.{Configs, Utils}
 import network.{Client, Explorer}
-import org.ergoplatform.appkit.{BlockchainContext, CoveringBoxes, ErgoToken, InputBox}
+import org.ergoplatform.appkit.{BlockchainContext, CoveringBoxes, ErgoToken, ErgoValue, InputBox}
 import org.ergoplatform.appkit.impl.ErgoTreeContract
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
-import play.api.libs.json.{JsArray, JsNumber, JsObject}
+import org.mockito.invocation.InvocationOnMock
 
 import scala.collection.immutable.List
 import collection.JavaConverters._
@@ -30,8 +30,8 @@ class MockedEnv (client: Client, contracts: Contracts) {
   when(mockedClient.getAllUnspentBox(contracts.incomeAddress)).thenReturn({
     var boxList: List[InputBox] = List()
     client.getClient.execute({ctx =>{
+      val txB = ctx.newTxBuilder()
       for(i <- 1 to Configs.incomeMerge.min) {
-        val txB = ctx.newTxBuilder()
         boxList = boxList :+
           txB.outBoxBuilder()
             .value(1e9.toLong)
@@ -39,7 +39,6 @@ class MockedEnv (client: Client, contracts: Contracts) {
             .build().convertToInputWith(randomId(), 1)
       }
       for(i <- 1 until Configs.incomeMerge.min) {
-        val txB = ctx.newTxBuilder()
         boxList = boxList :+
           txB.outBoxBuilder()
             .value((1e9*0.001).toLong)
@@ -48,12 +47,59 @@ class MockedEnv (client: Client, contracts: Contracts) {
             .build().convertToInputWith(randomId(), 1)
       }
       for(i <- 1 to Configs.incomeMerge.max) {
-        val txB = ctx.newTxBuilder()
         boxList = boxList :+
           txB.outBoxBuilder()
             .value((1e9*0.001).toLong)
             .contract(contracts.income)
             .tokens(new ErgoToken(tokenId2, 10))
+            .build().convertToInputWith(randomId(), 1)
+      }
+    }})
+    boxList
+  })
+  when(mockedClient.getAllUnspentBox(contracts.distributionAddress)).thenReturn({
+    var boxList: List[InputBox] = List()
+    client.getClient.execute({ctx =>{
+      val txB = ctx.newTxBuilder()
+      boxList = boxList :+
+        txB.outBoxBuilder()
+          .value(2e9.toLong)
+          .contract(contracts.distribution)
+          .build().convertToInputWith(randomId(), 1)
+      for(i <- 101 to 110) {
+        boxList = boxList :+
+          txB.outBoxBuilder()
+            .value(1e9.toLong)
+            .contract(contracts.distribution)
+            .tokens(new ErgoToken(Configs.token.distribution, 1))
+            .registers(Utils.longListToErgoValue(Array(i, 100000, 200, Configs.fee)), ErgoValue.of(10L))
+            .build().convertToInputWith(randomId(), 1)
+      }
+    }})
+    boxList
+  })
+  when(mockedClient.getAllUnspentBox(contracts.ticketAddress)).thenReturn({
+    var boxList: List[InputBox] = List()
+    client.getClient.execute({ctx =>{
+      val txB = ctx.newTxBuilder()
+      boxList = boxList :+
+        txB.outBoxBuilder()
+          .value(1e9.toLong)
+          .contract(contracts.ticket)
+          .tokens(new ErgoToken(Configs.token.locking, 1), new ErgoToken(Configs.token.staking, 10))
+          .registers(Utils.longListToErgoValue(Array(100, 103,Configs.fee, Configs.minBoxErg)),
+            ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script).getErgoTree.bytes),
+            ErgoValue.of(randomId().getBytes()))
+          .build().convertToInputWith(randomId(), 1)
+      for(i <- 101 to 110) {
+        boxList = boxList :+
+          txB.outBoxBuilder()
+            .value(1e9.toLong)
+            .contract(contracts.ticket)
+            .tokens(new ErgoToken(Configs.token.locking, 1), new ErgoToken(Configs.token.staking, i))
+            .registers(Utils.longListToErgoValue(Array(i, 101,Configs.fee, Configs.minBoxErg)),
+              ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script).getErgoTree.bytes),
+              ErgoValue.of(randomId().getBytes()))
             .build().convertToInputWith(randomId(), 1)
       }
     }})
@@ -77,8 +123,12 @@ class MockedEnv (client: Client, contracts: Contracts) {
     client.getClient.execute(_.newProverBuilder())
   })
   when(mockedCtx.sendTransaction(any())).thenReturn(randomId())
+  when(mockedCtx.signedTxFromJson(any())).thenAnswer((invocation: InvocationOnMock) => {
+    val input = invocation.getArgument(0, classOf[String])
+    client.getClient.execute(_.signedTxFromJson(input))
+  })
 
-  when(mockedExplorer.getUnconfirmedTxByAddress(dataset.lastMempoolBoxTest._2)).thenReturn(
-    dataset.lastMempoolBoxTest._1
-  )
+  when(mockedExplorer.getUnconfirmedTxByAddress(dataset.lastMempoolBoxTest._2)).thenReturn(dataset.lastMempoolBoxTest._1)
+  when(mockedExplorer.getUnconfirmedTxByAddress(contracts.configAddress.toString)).thenReturn(dataset.emptyResponse)
+  when(mockedExplorer.getTxsInMempoolByAddress(dataset.boxInMempoolTest._2)).thenReturn(dataset.boxInMempoolTest._1)
 }
