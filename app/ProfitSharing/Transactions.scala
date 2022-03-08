@@ -60,7 +60,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
   def mergeIncomesTx(incomes: Seq[InputBox], ctx: BlockchainContext): SignedTransaction = {
     val txB = ctx.newTxBuilder()
 
-    val totalValue: Long = incomes.map(item => item.getValue).reduce((a, b) => a + b)
+    val totalValue: Long = incomes.map(item => item.getValue.toLong).sum
     val fee: Long = incomes.size * Configs.incomeMerge.boxSize * Configs.feePerByte
     logger.debug(s"Calculated fee for merge transaction is $fee and maximum available fee is ${Configs.incomeMerge.maxFee}")
 
