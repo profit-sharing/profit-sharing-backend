@@ -1,4 +1,5 @@
 target/
 .idea/
+logs/
 project/target/
 staking_test.iml
