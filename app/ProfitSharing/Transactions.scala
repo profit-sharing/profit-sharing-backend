@@ -87,45 +87,6 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
     }
   }
 
-  def lockingTx(tokenBox: InputBox, ownerAddress: Address, configBox: InputBox, ctx: BlockchainContext): SignedTransaction ={
-    val txB = ctx.newTxBuilder()
-    val config = Config(configBox)
-    val newStakeCount = tokenBox.getTokens.get(0).getValue
-
-    val outConfig = boxes.getConfig(txB, configBox.getValue, configBox.getTokens.get(1).getValue, configBox.getTokens.get(2).getValue - 1,
-      Array(config.checkpoint, config.minErgShare, config.minTokenShare, config.ticketCount+1, config.stakeCount+ newStakeCount, config.fee,
-        config.minTicketValue, config.minBoxVal))
-    val outTicket = boxes.getTicket(txB, config.minTicketValue, newStakeCount, ownerAddress.getErgoAddress,
-      Array(config.checkpoint, config.checkpoint, config.fee, Configs.minBoxErg), configBox.getId)
-    val name = "ErgoProfitSharing, Reserved Token"
-    val description = s"Reserved token, defining $newStakeCount stake amount in the ErgoProfitSharing"
-    val outReservedToken = txB.outBoxBuilder()
-      .value(config.fee)
-      .contract(new ErgoTreeContract(ownerAddress.getErgoAddress.script))
-      .registers(ErgoValue.of(name.getBytes("utf-8")), ErgoValue.of(description.getBytes("utf-8")), ErgoValue.of("0".getBytes("utf-8")))
-      .tokens(new ErgoToken(configBox.getId, 1))
-      .build()
-
-    val tx = txB.boxesToSpend(Seq(configBox, tokenBox).asJava)
-      .fee(Configs.fee)
-      .outputs(outConfig, outTicket, outReservedToken)
-      .sendChangeTo(ownerAddress.getErgoAddress)
-      .build()
-
-    val prover = ctx.newProverBuilder()
-      .withDLogSecret(Configs.user.secret)
-      .build()
-    try {
-      val signedTx = prover.sign(tx)
-      signedTx
-    } catch {
-      case e: Throwable =>
-        logger.error(Utils.getStackTraceStr(e))
-        logger.error(s"Locking tx proving failed")
-        throw proveException()
-    }
-  }
-
   def distributionCreationTx(ctx: BlockchainContext, income: InputBox, configBox: InputBox): SignedTransaction = {
     val txB = ctx.newTxBuilder()
     val config = Config(configBox)

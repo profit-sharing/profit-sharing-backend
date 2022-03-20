@@ -1,6 +1,7 @@
 package controllers
 
-import ProfitSharing.Procedures
+import ProfitSharing.{Contracts, Procedures}
+import helpers.Configs
 import network.Client
 import play.api.Logger
 import play.api.libs.circe.Circe
@@ -11,7 +12,8 @@ import io.circe.Json
 
 
 @Singleton
-class HomeController @Inject()(assets: Assets, client: Client, procedures: Procedures, val controllerComponents: ControllerComponents) extends BaseController
+class HomeController @Inject()(assets: Assets, client: Client, procedures: Procedures, contracts: Contracts,
+                               val controllerComponents: ControllerComponents) extends BaseController
   with Circe {
   private val logger: Logger = Logger(this.getClass)
 
@@ -54,26 +56,20 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
   }
 
   /**
-   * Locking user staking tokens
-   * Needs to be changed (or removed) after using wallet connectors
-   */
-  def lock(): Action[AnyContent] = Action {
-    client.getClient.execute(ctx => {
-      procedures.locking(ctx)
-    })
-    val result = Json.fromFields(List(
-      ("status", Json.fromString("ok")),
-    ))
-    Ok(result.toString()).as("application/json")
-  }
-
-  /**
    * @return service information
    */
   def info(): Action[AnyContent] = Action {
-
     val result = Json.fromFields(List(
-      ("status", Json.fromString("ok")),
+      ("ergoTrees", Json.fromFields(List(
+        ("config", Json.fromString(contracts.configAddress.getErgoAddress.script.bytesHex)),
+        ("ticket", Json.fromString(contracts.ticketAddress.getErgoAddress.script.bytesHex))
+      ))),
+      ("tokens", Json.fromFields(List(
+        ("configNFT", Json.fromString(Configs.token.configNFT)),
+        ("distribution", Json.fromString(Configs.token.distribution)),
+        ("locking", Json.fromString(Configs.token.locking)),
+        ("staking", Json.fromString(Configs.token.staking))
+      )))
     ))
     Ok(result.toString()).as("application/json")
   }

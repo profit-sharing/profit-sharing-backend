@@ -2,10 +2,10 @@ package network
 
 
 import helpers.{Configs, Utils, connectionException}
-import org.ergoplatform.appkit.{Address, CoveringBoxes, ErgoClient, InputBox, RestApiErgoClient}
+import org.ergoplatform.appkit.{Address, CoveringBoxes, ErgoClient, ErgoToken, InputBox, RestApiErgoClient}
 import play.api.Logger
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import scala.collection.JavaConverters._
 
 @Singleton
@@ -24,7 +24,6 @@ class Client @Inject()() {
       client.execute(ctx => {
         ctx.getHeight
       })
-
     } catch {
       case e: Throwable =>
         logger.error(s"Could not set client! ${e.getMessage}.")
@@ -72,7 +71,7 @@ class Client @Inject()() {
   def getAllUnspentBox(address: Address): List[InputBox] = {
     client.execute(ctx =>
       try {
-        ctx.getCoveringBoxesFor(address, (1e9 * 1e8).toLong).getBoxes.asScala.toList
+        ctx.getCoveringBoxesFor(address, (1e9 * 1e8).toLong, List[ErgoToken]().asJava).getBoxes.asScala.toList
       } catch {
         case e: Throwable =>
           logger.error(e.getMessage)
@@ -88,7 +87,7 @@ class Client @Inject()() {
   def getCoveringBoxesFor(address: Address, amount: Long): CoveringBoxes = {
     client.execute(ctx =>
       try {
-        ctx.getCoveringBoxesFor(address, amount)
+        ctx.getCoveringBoxesFor(address, amount, List[ErgoToken]().asJava)
       } catch {
         case e: Throwable =>
           logger.error(e.getMessage)

@@ -1,8 +1,6 @@
 package helpers
 
 import java.io.{PrintWriter, StringWriter}
-import javax.inject.{Inject, Singleton}
-import io.circe.{Json => ciJson}
 
 import play.api.Logger
 import play.api.libs.json._
@@ -48,11 +46,6 @@ object Utils {
 
   def getContractScriptHash(contract: ErgoContract): Digest32 = {
     scorex.crypto.hash.Blake2b256(contract.getErgoTree.bytes)
-  }
-
-  def getContractAddress(contract: ErgoContract): String = {
-    val ergoTree = contract.getErgoTree
-    Configs.addressEncoder.fromProposition(ergoTree).get.toString
   }
 
   def JsonToTransaction(txJson: JsValue, ctx: BlockchainContext): SignedTransaction ={
