@@ -207,47 +207,6 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   }
 
   /**
-   * Target: testing lockingTx
-   * Dependencies:
-   *    Ctx
-   * Procedure:
-   *    1- mocking environment
-   *    2- mocking inputBoxes
-   *    3- Calling lockingTx function
-   * Expected Output:
-   *    The function should return a transaction locked the staking tokens
-   *    transaction must have 4 outputs, config box, locked tokens, reserved token and fee
-   */
-  property("Testing staking token locking tx") {
-    val mockedEnv = new MockedEnv(client, contracts)
-    val transactions = getMockedTransaction(mockedEnv)
-    val mockedTokenBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
-      .value(1e9.toLong + 2*Configs.fee)
-      .contract(new ErgoTreeContract(Configs.user.address.getErgoAddress.script))
-      .tokens(new ErgoToken(Configs.token.staking, 10))
-      .build().convertToInputWith(mockedEnv.randomId(), 1)
-    val mockedConfigBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
-      .value(1e9.toLong)
-      .contract(contracts.config)
-      .tokens(new ErgoToken(Configs.token.configNFT, 1),
-        new ErgoToken(Configs.token.distribution, 100),
-        new ErgoToken(Configs.token.locking, 20))
-      .registers(Utils.longListToErgoValue(Array(1, 1e9.toLong, 10, 0, 0, Configs.fee, 1e9.toLong, Configs.minBoxErg)))
-      .build().convertToInputWith(mockedEnv.randomId(), 1)
-    val tx = transactions.lockingTx(mockedTokenBox, Configs.user.address, mockedConfigBox, mockedEnv.getMockedCtx)
-
-    tx.getOutputsToSpend.size() should be (4)
-    tx.getOutputsToSpend.get(0).getTokens.size() should be (3)
-    tx.getOutputsToSpend.get(1).getTokens.size() should be (2)
-    tx.getOutputsToSpend.get(1).getValue should be (1e9.toLong)
-    tx.getOutputsToSpend.get(1).getTokens.get(0).getValue should be (1)
-    tx.getOutputsToSpend.get(1).getTokens.get(1).getValue should be (10)
-    tx.getOutputsToSpend.get(2).getTokens.get(0).getValue should be (1)
-    tx.getOutputsToSpend.get(2).getValue should be (Configs.fee)
-    tx.getOutputsToSpend.get(3).getValue should be (Configs.fee)
-  }
-
-  /**
    * Target: testing distributionCreationTx
    * Dependencies:
    *    Ctx
