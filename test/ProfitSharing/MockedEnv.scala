@@ -88,7 +88,7 @@ class MockedEnv (client: Client, contracts: Contracts) {
           .contract(contracts.ticket)
           .tokens(new ErgoToken(Configs.token.locking, 1), new ErgoToken(Configs.token.staking, 10))
           .registers(Utils.longListToErgoValue(Array(100, 103,Configs.fee, Configs.minBoxErg)),
-            ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script).getErgoTree.bytes),
+            ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script, Configs.networkType).getErgoTree.bytes),
             ErgoValue.of(randomId().getBytes()))
           .build().convertToInputWith(randomId(), 1)
       for(i <- 101 to 110) {
@@ -98,7 +98,7 @@ class MockedEnv (client: Client, contracts: Contracts) {
             .contract(contracts.ticket)
             .tokens(new ErgoToken(Configs.token.locking, 1), new ErgoToken(Configs.token.staking, i))
             .registers(Utils.longListToErgoValue(Array(i, 101,Configs.fee, Configs.minBoxErg)),
-              ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script).getErgoTree.bytes),
+              ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script, Configs.networkType).getErgoTree.bytes),
               ErgoValue.of(randomId().getBytes()))
             .build().convertToInputWith(randomId(), 1)
       }
@@ -110,9 +110,9 @@ class MockedEnv (client: Client, contracts: Contracts) {
       val txB = ctx.newTxBuilder()
       val box = txB.outBoxBuilder()
         .value(1e9.toLong)
-        .contract(new ErgoTreeContract(Configs.initializer.address.getErgoAddress.script))
+        .contract(new ErgoTreeContract(Configs.initializer.address.getErgoAddress.script, Configs.networkType))
         .build().convertToInputWith(randomId(), 1)
-      new CoveringBoxes(Configs.fee * 8, List(box).asJava)
+      new CoveringBoxes(Configs.fee * 8, List(box).asJava, Seq().asJava, false)
     })
   })
 

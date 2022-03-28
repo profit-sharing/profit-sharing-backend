@@ -165,7 +165,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     val transactions = getMockedTransaction(mockedEnv)
     val mockedInputBox = mockedEnv.getMockedCtx.newTxBuilder().outBoxBuilder()
       .value(1e9.toLong)
-      .contract(new ErgoTreeContract(Configs.initializer.address.getErgoAddress.script))
+      .contract(new ErgoTreeContract(Configs.initializer.address.getErgoAddress.script, Configs.networkType))
       .build().convertToInputWith(mockedEnv.randomId(), 1)
     val tx = transactions.tokenIssueTx(mockedEnv.getMockedCtx, 10, List(mockedInputBox), Configs.initializer.address, "test token", "test token")
     tx.getOutputsToSpend.size() should be (3)
@@ -284,7 +284,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
       .tokens(new ErgoToken(Configs.token.locking, 1),
         new ErgoToken(Configs.token.staking, 10))
       .registers(Utils.longListToErgoValue(Array(80, 100, Configs.fee, Configs.minBoxErg)),
-        ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script).getErgoTree.bytes),
+        ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script, Configs.networkType).getErgoTree.bytes),
         ErgoValue.of(new ErgoId(mockedEnv.tokenId2.getBytes()).getBytes))
       .build().convertToInputWith(mockedEnv.randomId(), 1)
     val tx = transactions.distributionPaymentTx(mockedEnv.getMockedCtx, mockedBankBox, mockedTicketBox)
@@ -465,7 +465,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
       .tokens(new ErgoToken(Configs.token.locking, 1),
         new ErgoToken(Configs.token.staking, 10))
       .registers(Utils.longListToErgoValue(Array(80, 100, Configs.fee, Configs.minBoxErg)),
-        ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script).getErgoTree.bytes),
+        ErgoValue.of(new ErgoTreeContract(Configs.user.address.getErgoAddress.script, Configs.networkType).getErgoTree.bytes),
         ErgoValue.of(new ErgoId(mockedEnv.tokenId2.getBytes()).getBytes))
       .build().convertToInputWith(mockedEnv.randomId(), 1))
     doReturn(mockedConfigBox, mockedConfigBox).when(mockedBoxes).findConfig(mockedEnv.getMockedCtx)
