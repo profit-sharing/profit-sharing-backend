@@ -16,7 +16,7 @@ lazy val settings = Seq(
     guice,
     "org.scalaj" %% "scalaj-http" % "2.4.2",
     "com.dripower" %% "play-circe" % "2712.0",
-    "org.ergoplatform" %% "ergo-appkit" % "4.0.6",
+    "org.ergoplatform" %% "ergo-appkit" % "4.0.8",
     "org.scorexfoundation" %% "scrypto" % "2.1.10",
     "io.kinoplan" % "emailaddress-play-json_2.12" % "0.1.0"
   )

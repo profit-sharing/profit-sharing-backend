@@ -19,14 +19,14 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
     val totalValue: Long = inputs.map(item => item.getValue.toLong).sum
     val output = txB.outBoxBuilder()
       .value(totalValue - 2*Configs.fee)
-      .contract(new ErgoTreeContract(address.getErgoAddress.script))
+      .contract(new ErgoTreeContract(address.getErgoAddress.script, Configs.networkType))
       .build()
 
     val outToken = txB.outBoxBuilder()
       .value(Configs.fee)
       .tokens(new ErgoToken(inputs.head.getId, count))
       .registers(ErgoValue.of(name.getBytes("utf-8")), ErgoValue.of(description.getBytes("utf-8")), ErgoValue.of("0".getBytes("utf-8")))
-      .contract(new ErgoTreeContract(address.getErgoAddress.script))
+      .contract(new ErgoTreeContract(address.getErgoAddress.script, Configs.networkType))
       .build()
 
     val tx = txB.boxesToSpend(inputs.asJava)
@@ -165,7 +165,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
       bankOut = boxes.getDistribution(txB, bankBox.getValue - bank.ergShare * ticket.stakeCount, bank.checkpoint, bank.fee, bank.ticketCount - 1, bank.ergShare)
       payment = txB.outBoxBuilder()
         .value(bank.ergShare * ticket.stakeCount + ticket.minBoxVal)
-        .contract(new ErgoTreeContract(ticket.recipientAddress.script))
+        .contract(new ErgoTreeContract(ticket.recipientAddress.script, Configs.networkType))
         .build()
     }
     else {
@@ -176,7 +176,7 @@ class Transactions@Inject()(boxes: Boxes, contracts: Contracts) {
         bank.checkpoint, bank.fee, bank.ticketCount - 1, bank.ergShare, bank.tokenShare, tokenCount, tokenId)
       payment = txB.outBoxBuilder()
         .value(bank.ergShare * ticket.stakeCount + ticket.minBoxVal)
-        .contract(new ErgoTreeContract(ticket.recipientAddress.script))
+        .contract(new ErgoTreeContract(ticket.recipientAddress.script, Configs.networkType))
         .tokens(new ErgoToken(tokenId, tokenPayment))
         .build()
     }
