@@ -62,7 +62,8 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
     val result = Json.fromFields(List(
       ("ergoTrees", Json.fromFields(List(
         ("config", Json.fromString(contracts.configAddress.getErgoAddress.script.bytesHex)),
-        ("ticket", Json.fromString(contracts.ticketAddress.getErgoAddress.script.bytesHex))
+        ("ticket", Json.fromString(contracts.ticketAddress.getErgoAddress.script.bytesHex)),
+        ("fee", Json.fromString(Configs.feeErgoTree))
       ))),
       ("tokens", Json.fromFields(List(
         ("configNFT", Json.fromString(Configs.token.configNFT)),
