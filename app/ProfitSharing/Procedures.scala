@@ -3,7 +3,7 @@ package ProfitSharing
 import helpers.{Configs, Utils, failedTxException, internalException, notCoveredException, proveException}
 import models.{Config, Distribution}
 import network.Client
-import org.ergoplatform.appkit.{BlockchainContext, SignedTransaction}
+import org.ergoplatform.appkit.{BlockchainContext, InputBox, SignedTransaction}
 import play.api.Logger
 
 import javax.inject.{Inject, Singleton}
@@ -97,23 +97,6 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
       }
   } catch {
     case _: internalException => logger.warn("Something went wrong on merging")
-    case e: Throwable => logger.error(Utils.getStackTraceStr(e))
-  }
-
-  def locking(ctx: BlockchainContext): Unit = try{
-    val userBox = client.getAllUnspentBox(Configs.user.address).filter(_.getTokens.size() > 0)
-      .filter(_.getTokens.get(0).getId.toString == Configs.token.staking).filter(_.getValue >= Configs.initializer.minTicketValue + Configs.fee*2).head
-    val signedTx = transactions.lockingTx(userBox, Configs.user.address, boxes.findConfig(ctx), ctx)
-    try{
-      ctx.sendTransaction(signedTx)
-      logger.info(s"Lock tx Sent with TxId: ${signedTx.getId}")
-    } catch{
-      case _: Throwable =>
-        logger.error(s"Lock tx sending failed")
-    }
-  } catch {
-    case _: proveException => logger.error("Locking failed")
-    case _: internalException => logger.warn("Something went wrong on locking")
     case e: Throwable => logger.error(Utils.getStackTraceStr(e))
   }
 

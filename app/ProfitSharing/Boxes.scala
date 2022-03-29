@@ -169,7 +169,7 @@ class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
       .contract(contracts.ticket)
       .tokens(new ErgoToken(Configs.token.locking, 1), new ErgoToken(Configs.token.staking, stake))
       .registers(Utils.longListToErgoValue(r4),
-        ErgoValue.of(new ErgoTreeContract(address.script).getErgoTree.bytes),
+        ErgoValue.of(new ErgoTreeContract(address.script, Configs.networkType).getErgoTree.bytes),
         ErgoValue.of(reservedTokenId.getBytes))
       .build()
   }
