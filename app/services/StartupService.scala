@@ -21,24 +21,27 @@ class StartupService @Inject()(node: Client, system: ActorSystem, procedures: Pr
 
   val jobs: ActorRef = system.actorOf(Props(new Jobs(procedures, node)), "scheduler")
 
-  system.scheduler.scheduleAtFixedRate(
-    initialDelay = 2.seconds,
-    interval = Configs.timeInterval.incomeMerge.seconds,
-    receiver = jobs,
-    message = JobsUtil.merge
-  )
+  if(Configs.initializer.isInitialized) {
+    system.scheduler.scheduleAtFixedRate(
+      initialDelay = 2.seconds,
+      interval = Configs.timeInterval.incomeMerge.seconds,
+      receiver = jobs,
+      message = JobsUtil.merge
+    )
 
-  system.scheduler.scheduleAtFixedRate(
-    initialDelay = 2.seconds,
-    interval = Configs.timeInterval.distribution.seconds,
-    receiver = jobs,
-    message = JobsUtil.distribution
-  )
+    system.scheduler.scheduleAtFixedRate(
+      initialDelay = 2.seconds,
+      interval = Configs.timeInterval.distribution.seconds,
+      receiver = jobs,
+      message = JobsUtil.distribution
+    )
 
-  system.scheduler.scheduleAtFixedRate(
-    initialDelay = 2.seconds,
-    interval = Configs.timeInterval.payment.seconds,
-    receiver = jobs,
-    message = JobsUtil.payment
-  )
+
+    system.scheduler.scheduleAtFixedRate(
+      initialDelay = 2.seconds,
+      interval = Configs.timeInterval.payment.seconds,
+      receiver = jobs,
+      message = JobsUtil.payment
+    )
+  }
 }

@@ -21,7 +21,7 @@ class Boxes@Inject()(client: Client, contracts: Contracts, explorer: Explorer) {
    *         each list contains boxes related to one token type or ERG
    */
   def getIncomes: List[List[InputBox]] ={
-    val boxes = client.getAllUnspentBox(contracts.incomeAddress)
+    val boxes = client.getAllUnspentBox(contracts.incomeAddress).filter(box => !isBoxInMemPool(box))
     var result: List[List[InputBox]] = List()
     val ergIncomes = boxes.filter(_.getTokens.size() == 0)
     if(ergIncomes.size >= Configs.incomeMerge.min) result = result :+ ergIncomes.take(Configs.incomeMerge.min)

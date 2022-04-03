@@ -1,24 +1,32 @@
 package ProfitSharing
 
-import helpers.{Configs, Utils, failedTxException, internalException, notCoveredException, proveException}
+import helpers.{Configs, Utils, connectionException, failedTxException, internalException, notCoveredException, proveException}
 import models.{Config, Distribution}
-import network.Client
-import org.ergoplatform.appkit.{BlockchainContext, InputBox, SignedTransaction}
+import network.{Client, Explorer}
+import org.ergoplatform.appkit.{BlockchainContext, SignedTransaction}
 import play.api.Logger
 
 import javax.inject.{Inject, Singleton}
 import scala.collection.JavaConverters._
 
 @Singleton
-class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, transactions: Transactions) {
+class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, transactions: Transactions, explorer: Explorer) {
   private val logger: Logger = Logger(this.getClass)
 
-  def serviceInitialization(ctx: BlockchainContext): List[String] = try{
+  def serviceInitialization(ctx: BlockchainContext): Unit = try{
     val initialBox = client.getCoveringBoxesFor(Configs.initializer.address, Configs.fee * 8).getBoxes.asScala.filter(_.getTokens.size() == 0)
+    if(initialBox.isEmpty){
+      logger.error("Not enough fund for initialization")
+      throw failedTxException()
+    }
     val configNFTTx: SignedTransaction = transactions.tokenIssueTx(ctx, 1, initialBox, Configs.initializer.address, "ErgoProfitSharing, ConfigNFT", "ErgoProfitSharing, ConfigNFT")
+    explorer.waitForTxConfirmation(configNFTTx.getId)
     val distTokenTx = transactions.tokenIssueTx(ctx, Configs.initializer.distributionCount, Seq(configNFTTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, DistributionToken", "ErgoProfitSharing, DistributionToken")
+    explorer.waitForTxConfirmation(distTokenTx.getId)
     val lockingTokenTx = transactions.tokenIssueTx(ctx, Configs.initializer.lockingCount, Seq(distTokenTx.getOutputsToSpend.get(0)), Configs.initializer.address, "ErgoProfitSharing, LockingToken", "ErgoProfitSharing, LockingToken")
+    explorer.waitForTxConfirmation(lockingTokenTx.getId)
     val stakingTokenTx = transactions.tokenIssueTx(ctx, Configs.fee, Seq(lockingTokenTx.getOutputsToSpend.get(0)), Configs.owner.address, "ErgoProfitSharing, StakingToken", "ErgoProfitSharing, StakingToken")
+    explorer.waitForTxConfirmation(stakingTokenTx.getId)
 
     val configNFT = configNFTTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
     val distributionToken = distTokenTx.getOutputsToSpend.get(1).getTokens.get(0).getId.toString
@@ -32,7 +40,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
     logger.info(s"Distribution Token: $distributionToken")
     logger.info(s"locking Token: $lockingToken")
     logger.info(s"staking Token: $stakingToken")
-    logger.debug(s"Config.NFT ${Configs.token.configNFT}")
+    logger.debug(s"config.staking ${Configs.token.staking}")
 
     val txB = ctx.newTxBuilder()
     val configBox = boxes.createConfig(txB)
@@ -57,20 +65,14 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
     try{
       ctx.sendTransaction(signedTx)
       logger.info(s"config box created successfully with txId: ${signedTx.getId}")
-      List(configNFT, distributionToken, lockingToken, stakingToken)
     } catch{
-      case _: Throwable =>
-        logger.error(s"Config box creation tx sending failed")
-        List()
+      case _: Throwable => logger.error(s"Config box creation tx sending failed")
     }
   } catch {
-    case _: proveException | _: failedTxException =>
-      logger.error("initialization failed")
-      List()
+    case _: proveException | _: failedTxException | _:connectionException => logger.error("initialization failed")
     case e: Throwable =>
       logger.error("initialization failed")
       logger.error(Utils.getStackTraceStr(e))
-      List()
   }
 
   def mergeIncomes(ctx: BlockchainContext): Unit = try{
@@ -96,6 +98,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
         }
       }
   } catch {
+    case e: connectionException => logger.error(e.getMessage)
     case _: internalException => logger.warn("Something went wrong on merging")
     case e: Throwable => logger.error(Utils.getStackTraceStr(e))
   }
@@ -103,23 +106,26 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
   def distributionCreation(ctx: BlockchainContext): Unit = try{
     var configBox = boxes.findConfig(ctx)
     val config = Config(configBox)
-    client.getAllUnspentBox(contracts.incomeAddress).foreach(income =>{
-      if(income.getValue >= config.minErgShare * config.stakeCount + 2 * Configs.fee ||
-        (income.getTokens.size() > 0 && income.getTokens.get(0).getValue >= config.minTokenShare * config.stakeCount)) {
-        logger.info("one income hits the threshold creating the distribution")
-        val signedTx = transactions.distributionCreationTx(ctx, income, configBox)
-        try{
-          ctx.sendTransaction(signedTx)
-          logger.info(s"Distribution creation tx Sent with TxId: ${signedTx.getId}")
-          configBox = signedTx.getOutputsToSpend.get(0)
-        } catch{
-          case _: Throwable =>
-            logger.error(s"Distribution creation tx sending failed")
+    if(config.stakeCount != 0)
+      client.getAllUnspentBox(contracts.incomeAddress).foreach(income =>{
+        if(income.getValue >= config.minErgShare * config.stakeCount + 2 * Configs.fee ||
+          (income.getTokens.size() > 0 && income.getTokens.get(0).getValue >= config.minTokenShare * config.stakeCount)) {
+          logger.info("one income hits the threshold creating the distribution")
+          val signedTx = transactions.distributionCreationTx(ctx, income, configBox)
+          try{
+            ctx.sendTransaction(signedTx)
+            logger.info(s"Distribution creation tx Sent with TxId: ${signedTx.getId}")
+            configBox = signedTx.getOutputsToSpend.get(0)
+          } catch{
+            case e: Throwable =>
+              logger.error(Utils.getStackTraceStr(e))
+              logger.error(s"Distribution creation tx sending failed with node error: ${e.getMessage}")
+          }
         }
-      }
-    })
+      })
   } catch {
     case e: notCoveredException => logger.error(e.getMessage)
+    case e: connectionException => logger.warn(e.getMessage)
     case _: proveException => logger.error("Distribution creation failed")
     case _: internalException => logger.warn("Something went wrong on distribution creation")
     case e: Throwable => logger.error(Utils.getStackTraceStr(e))
@@ -148,6 +154,7 @@ class Procedures@Inject()(client: Client ,boxes: Boxes, contracts: Contracts, tr
         try{
           ctx.sendTransaction(signedTx)
           logger.info(s"Distribution redeem tx Sent with TxId: ${signedTx.getId}")
+          configBox = signedTx.getOutputsToSpend.get(0)
         } catch{
           case _: Throwable =>
             logger.error(s"Distribution redeem tx sending failed")

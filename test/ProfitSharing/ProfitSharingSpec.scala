@@ -28,7 +28,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   def getMockedProcedure(mockedEnv: MockedEnv): Procedures = {
     val boxes = new Boxes(mockedEnv.getMockedClient, contracts, mockedEnv.getMockedExplorer)
     val transactions = new Transactions(boxes, contracts)
-    new Procedures(mockedEnv.getMockedClient, boxes, contracts, transactions)
+    new Procedures(mockedEnv.getMockedClient, boxes, contracts, transactions, mockedEnv.getMockedExplorer)
   }
 
   /**
@@ -62,7 +62,9 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
   property("Testing income box search") {
     val mockedEnv = new MockedEnv(client, contracts)
     val boxes = getMockedBoxes(mockedEnv)
-    val result = boxes.getIncomes
+    val spyBoxes = spy(boxes)
+    doReturn(false: java.lang.Boolean, false: java.lang.Boolean).when(spyBoxes).isBoxInMemPool(any())
+    val result = spyBoxes.getIncomes
     result.size should be (2)
     result(0).size should be (Configs.incomeMerge.min)
     result(1).size should be (Configs.incomeMerge.max)
@@ -350,7 +352,6 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     val mockedEnv = new MockedEnv(client, contracts)
     val procedures = getMockedProcedure(mockedEnv)
     val result = procedures.serviceInitialization(mockedEnv.getMockedCtx)
-    result should have size 4
     // TODO: Mock the tokenIssueTx and change this to 1 time
     verify(mockedEnv.getMockedCtx, times(5)).sendTransaction(any())
   }
@@ -376,7 +377,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     doReturn(List(List(), List()), List(List(), List())).when(mockedBoxes).getIncomes
     val mockedTransactions: Transactions = mock(classOf[Transactions])
     when(mockedTransactions.mergeIncomesTx(List(), mockedEnv.getMockedCtx)).thenReturn(dataset.signedMergeTx)
-    val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions)
+    val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions, mockedEnv.getMockedExplorer)
     procedures.mergeIncomes(mockedEnv.getMockedCtx)
     verify(mockedBoxes, times(1)).getIncomes
     verify(mockedTransactions, times(2)).mergeIncomesTx(any(), any())
@@ -413,7 +414,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     when(mockedSignedTx.getOutputsToSpend).thenReturn(Seq(mockedConfigBox).asJava)
     val mockedTransactions: Transactions = mock(classOf[Transactions])
     when(mockedTransactions.distributionCreationTx(any(), any(), any())).thenReturn(mockedSignedTx)
-    val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions)
+    val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions, mockedEnv.getMockedExplorer)
     procedures.distributionCreation(mockedEnv.getMockedCtx)
     verify(mockedTransactions, times(Configs.incomeMerge.max + Configs.incomeMerge.min)).distributionCreationTx(any(), any(), any())
   }
@@ -474,7 +475,7 @@ class ProfitSharingSpec extends AnyPropSpec with should.Matchers{
     val mockedTransactions: Transactions = mock(classOf[Transactions])
     when(mockedTransactions.distributionPaymentTx(any(), any(), any())).thenReturn(dataset.signedPaymentTx)
     when(mockedTransactions.distributionRedeemTx(any(), any(), any())).thenReturn(dataset.signedDistributionRedeemTx)
-    val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions)
+    val procedures = new Procedures(mockedEnv.getMockedClient, mockedBoxes, contracts, mockedTransactions, mockedEnv.getMockedExplorer)
     procedures.payment(mockedEnv.getMockedCtx)
     verify(mockedTransactions, times(1)).distributionPaymentTx(any(), any(), any())
     verify(mockedTransactions, times(1)).distributionRedeemTx(any(), any(), any())

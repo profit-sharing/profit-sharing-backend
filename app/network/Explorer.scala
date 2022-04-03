@@ -65,7 +65,7 @@ class Explorer() {
     if (unc != JsNull) 0
     else {
       val conf = getConfirmedTx(txId)
-      if (conf != JsNull) ((conf \ "summary").as[JsValue] \ "confirmationsCount").as[Int]
+      if (conf != JsNull) (conf \ "numConfirmations").as[Int]
       else -1
     }
   } catch {
@@ -133,5 +133,17 @@ class Explorer() {
     case e: Throwable =>
       logger.error(e.getMessage)
       throw connectionException()
+  }
+
+  def waitForTxConfirmation(txId: String): Unit = {
+    var confirm = -1
+    while(confirm < 1){
+      Thread.sleep(1000)
+      try{
+        confirm = getConfNum(txId)
+      } catch {
+        case _: Throwable => confirm = -1
+      }
+    }
   }
 }
