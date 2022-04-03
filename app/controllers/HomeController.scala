@@ -7,9 +7,11 @@ import play.api.Logger
 import play.api.libs.circe.Circe
 import play.api.mvc._
 
+//import scala.concurrent.{ExecutionContext, Future}
 import javax.inject._
 import io.circe.Json
 
+//import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
 class HomeController @Inject()(assets: Assets, client: Client, procedures: Procedures, contracts: Contracts,
@@ -35,23 +37,12 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
    * You need to update the service config after this initialization
    */
   def serviceInitialization(): Action[AnyContent] = Action {
-    var response: List[String] = null
     client.getClient.execute(ctx => {
-      response = procedures.serviceInitialization(ctx)
+//      Future{procedures.serviceInitialization(ctx)}
     })
-    var result: Json = null
-    if(response.isEmpty)
-      result = Json.fromFields(List(
-        ("status", Json.fromString("Error"))
-      ))
-    else
-      result = Json.fromFields(List(
-        ("status", Json.fromString("Ok")),
-        ("configNFT", Json.fromString(response.head)),
-        ("distributionToken", Json.fromString(response(1))),
-        ("lockingToken", Json.fromString(response(2))),
-        ("stakingToken", Json.fromString(response(3)))
-      ))
+    val result: Json = Json.fromFields(List(
+      ("message", Json.fromString("Initialization started, don't forget to update the config after completion"))
+    ))
     Ok(result.toString()).as("application/json")
   }
 

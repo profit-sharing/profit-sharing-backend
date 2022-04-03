@@ -28,6 +28,7 @@ object Configs extends ConfigHelper {
     lazy val minTokenShare: Long = readKey("initializer.minTokenShare").toLong
     lazy val minErgShare: Long = readKey("initializer.minErgShare").toLong
     lazy val minTicketValue: Long = readKey("initializer.minTicketValue").toLong
+    lazy val isInitialized: Boolean = readKey("initializer.isInitialized").toBoolean
   }
 
   object timeInterval{

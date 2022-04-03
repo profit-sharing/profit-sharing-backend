@@ -168,11 +168,12 @@ object Scripts {
      |  else {
      |    // unlocking staking tokens
      |    // INPUTS: Config, SELF(Ticket), ReservedTokens --> OUTPUTS: Config, UnlockedStakingTokens
+     |    val reservedCheck = INPUTS(2).tokens.exists{ (token: (Coll[Byte], Long)) => token._1 == reservedToken}
      |    val unlocking = allOf(Coll(
      |      // Config Box checking
      |      INPUTS(0).tokens(0)._1 == configNFT,
      |      // Reserve Tokens Checking
-     |      INPUTS(2).tokens(0)._1 == reservedToken,
+     |      reservedCheck,
      |      // Staking token redeem checking
      |      OUTPUTS(1).tokens(0)._1 == SELF.tokens(1)._1,
      |      OUTPUTS(1).tokens(0)._2 == SELF.tokens(1)._2,
@@ -185,8 +186,6 @@ object Scripts {
   // Tokens 0: configNFT, 1: DistributionTokens, 2: LockingTokens
   lazy val configScript: String =
   s"""{
-     |  val lockingToken = fromBase64("LOCKING_TOKEN")
-     |  val distributionToken = fromBase64("DISTRIBUTION_TOKEN")
      |  val stakingToken = fromBase64("STAKING_TOKEN")
      |  val distributionHash = fromBase64("DISTRIBUTION_HASH")
      |  val ticketHash = fromBase64("TICKET_HASH")

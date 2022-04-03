@@ -50,8 +50,6 @@ class Contracts @Inject()(client: Client){
 
   private def generateConfigContract(): ErgoContract ={
     val script = Scripts.configScript
-      .replace("DISTRIBUTION_TOKEN", Base64.encode(Base16.decode(Configs.token.distribution).get))
-      .replace("LOCKING_TOKEN", Base64.encode(Base16.decode(Configs.token.locking).get))
       .replace("STAKING_TOKEN", Base64.encode(Base16.decode(Configs.token.staking).get))
       .replace("DISTRIBUTION_HASH", Base64.encode(Utils.getContractScriptHash(distribution)))
       .replace("TICKET_HASH", Base64.encode(Utils.getContractScriptHash(ticket)))
