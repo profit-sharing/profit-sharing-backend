@@ -7,11 +7,11 @@ import play.api.Logger
 import play.api.libs.circe.Circe
 import play.api.mvc._
 
-//import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import javax.inject._
 import io.circe.Json
 
-//import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
 class HomeController @Inject()(assets: Assets, client: Client, procedures: Procedures, contracts: Contracts,
@@ -38,7 +38,7 @@ class HomeController @Inject()(assets: Assets, client: Client, procedures: Proce
    */
   def serviceInitialization(): Action[AnyContent] = Action {
     client.getClient.execute(ctx => {
-//      Future{procedures.serviceInitialization(ctx)}
+      Future{procedures.serviceInitialization(ctx)}
     })
     val result: Json = Json.fromFields(List(
       ("message", Json.fromString("Initialization started, don't forget to update the config after completion"))
