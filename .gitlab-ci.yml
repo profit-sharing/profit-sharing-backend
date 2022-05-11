@@ -1,0 +1,11 @@
+image: "mozilla/sbt:8u181_1.2.7"
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - sbt clean test
+
+
